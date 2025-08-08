@@ -1,3 +1,31 @@
+<div class="station-rating-formula">
+            <div class="formula-title">Рейтинг станции:</div>
+            <div class="formula">
+                $$R_{станция} = \frac{\sum_{i=1}^{n} R_i \cdot W_i}{\sum_{i=1}^{n} W_i}$$
+            </div>
+            <div class="description">
+                <ul>
+                    <li>\(R_i\) — рейтинг i-го оборудования на станции</li>
+                    <li>\(W_i\) — весовой коэффициент i-го оборудования (например, установленная мощность)</li>
+                    <li>\(n\) — количество оборудования на станции</li>
+                    <li>Рейтинг рассчитывается как средневзвешенное значение рейтингов всего оборудования станции</li>
+                    <li>Чем выше значение R, тем хуже общие показатели станции</li>
+                </ul>
+            </div>
+        </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
 @using Newtonsoft.Json;
 
 <head>
@@ -308,3 +336,4 @@
         updateEquipmentList();
     </script>
 </body>
+
