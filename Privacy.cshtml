@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <title>Parameters</title>
+    <!-- Подключаем MathJax для рендеринга формул -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
     <style>
         body {
             background-color: black;
             color: white;
             font-family: sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0; /* padding обнулили */
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            padding: 20px;
         }
 
         h1 {
@@ -50,9 +53,7 @@
             background-color: #333;
             padding: 10px;
             border-radius: 5px;
-            font-family: monospace;
             margin-bottom: 5px;
-            white-space: pre-wrap;
             overflow-x: auto;
         }
 
@@ -63,7 +64,7 @@
         .formula-group-title {
             font-weight: bold;
             margin-bottom: 5px;
-            color: #009F00;
+            color: #fd817e; /* заменён цвет */
         }
 
         .parameters-container {
@@ -109,7 +110,7 @@
         }
 
         .btn-submit {
-            background-color: #006400;
+            background-color: #fd817e;
             color: white;
             border: none;
             padding: 8px 15px;
@@ -121,7 +122,7 @@
         }
 
         .btn-submit:hover {
-            background-color: #009F00;
+            background-color: #ff9a97;
         }
 
         .correction-window {
@@ -140,17 +141,10 @@
 
         .correction-item {
             margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
         }
 
         .correction-label {
             color: #aaaaaa;
-        }
-
-        .correction-value {
-            color: #dddddd;
-            font-weight: bold;
         }
     </style>
 </head>
@@ -165,21 +159,21 @@
                 <div class="formula-group">
                     <div class="formula-group-title">Для турбин:</div>
                     <div class="formula">
-                        УРТ% = ((Фактический УРТ - Нормативный УРТ) / Фактический УРТ) * 100
+                        $$\text{УРТ\%} = \frac{\text{Фактический УРТ} - \text{Нормативный УРТ}}{\text{Фактический УРТ}} \times 100$$
                     </div>
                 </div>
                 
                 <div class="formula-group">
                     <div class="formula-group-title">Для котлов:</div>
                     <div class="formula">
-                        КПД% = ((Фактический КПД - Нормативный КПД) / Фактический КПД) * 100
+                        $$\text{КПД\%} = \frac{\text{Фактический КПД} - \text{Нормативный КПД}}{\text{Фактический КПД}} \times 100$$
                     </div>
                 </div>
                 
                 <div class="formula-group">
                     <div class="formula-group-title">Рейтинг станции:</div>
                     <div class="formula">
-                        Рейтинг = (Σ(УРТ% * Расход тепла) * -1 + Σ(КПД% * Выработка тепла)) * 2 / Общий объем
+                        $$\text{Рейтинг} = \frac{\sum(\text{УРТ\%} \cdot \text{Расход тепла}) \cdot (-1) + \sum(\text{КПД\%} \cdot \text{Выработка тепла}) \cdot 2}{\text{Общий объём}}$$
                     </div>
                 </div>
             </div>
@@ -190,26 +184,14 @@
                 <div class="formula-group">
                     <div class="formula-group-title">Фактический КПД котла:</div>
                     <div class="formula">
-                        𝜂_(К(БР))^НОМ=𝜂_К(БР)^КР−∆𝑞_4^(𝑊_Р)−∆𝑞_4^(𝐴_𝑅)+(𝑡_ХВ^ФАКТ−𝑡_ХВ^НОМ)∙∆𝜂_К(БР)^ХВ
-                        
-                        Где:
-                        𝜂_К(БР)^КР - КПД котла брутто по КР
-                        ∆𝑞_4^(𝑊_Р) - поправка к q4 на влажность угля
-                        ∆𝑞_4^(𝐴_𝑅) - поправка к q4 на зольность угля
-                        𝑡_ХВ^ФАКТ - фактическая температура холодного воздуха
-                        𝑡_ХВ^НОМ - номинальная температура холодного воздуха
-                        ∆𝜂_К(БР)^ХВ - поправка к КПД на 1°C
+                        $$\eta_{K(БР)}^{НОМ} = \eta_{K(БР)}^{КР} - \Delta q_4^{W_P} - \Delta q_4^{A_R} + (t_{ХВ}^{ФАКТ} - t_{ХВ}^{НОМ}) \cdot \Delta \eta_{K(БР)}^{ХВ}$$
                     </div>
                 </div>
                 
                 <div class="formula-group">
                     <div class="formula-group-title">Фактический УРТ турбины:</div>
                     <div class="formula">
-                        𝑞_(Т(БР))^НОМ=𝑞Т(БР)^КР+∆𝑞(Т(БР))^(Р_2)
-                        
-                        Где:
-                        𝑞Т(БР)^КР - УРТ турбины по КР
-                        ∆𝑞(Т(БР))^(Р_2) - поправка к УРТ на давление
+                        $$q_{T(БР)}^{НОМ} = q_{T(БР)}^{КР} + \Delta q_{T(БР)}^{P_2}$$
                     </div>
                 </div>
             </div>
@@ -227,20 +209,20 @@
                         </select>
                     </div>
                     
-                    <!-- Окно поправок для турбин -->
-                    <div class="correction-window" id="turbineCorrections">
-                        <div class="correction-title">Поправки для турбин:</div>
+                    <!-- Окно поправок -->
+                    <div class="correction-window" id="correctionsWindow">
+                        <div class="correction-title">Поправки:</div>
                         <div class="correction-item">
-                            <span class="correction-label">Поправка на давление (Р<sub>2</sub>):</span>
-                            <span class="correction-value">+0.15%</span>
+                            <label class="correction-label">Поправка 1:</label>
+                            <input type="number" step="0.01" value="0">
                         </div>
                         <div class="correction-item">
-                            <span class="correction-label">Поправка на температуру:</span>
-                            <span class="correction-value">-0.08%</span>
+                            <label class="correction-label">Поправка 2:</label>
+                            <input type="number" step="0.01" value="0">
                         </div>
                         <div class="correction-item">
-                            <span class="correction-label">Поправка на нагрузку:</span>
-                            <span class="correction-value">+0.22%</span>
+                            <label class="correction-label">Поправка 3:</label>
+                            <input type="number" step="0.01" value="0">
                         </div>
                     </div>
                 </div>
@@ -264,9 +246,7 @@
                     <div class="parameter-title">Оборудование</div>
                     <div class="parameter-item">
                         <label for="equipmentId">Выберите оборудование:</label>
-                        <select id="equipmentId" name="equipmentId">
-                            <!-- Опции будут заполнены динамически через JavaScript -->
-                        </select>
+                        <select id="equipmentId" name="equipmentId"></select>
                     </div>
                 </div>
             </div>
@@ -276,13 +256,10 @@
     </div>
 
     <script>
-        // Динамическое заполнение списка оборудования в зависимости от выбранного типа
         const equipmentTypeSelect = document.getElementById('equipmentType');
         const stationSelect = document.getElementById('station');
         const equipmentIdSelect = document.getElementById('equipmentId');
-        const turbineCorrections = document.getElementById('turbineCorrections');
         
-        // Данные по оборудованию для каждой станции
         const equipmentData = {
             turbine: {
                 25: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
@@ -302,15 +279,10 @@
             }
         };
         
-        // Обновление списка оборудования при изменении типа или станции
         function updateEquipmentList() {
             const type = equipmentTypeSelect.value;
             const station = stationSelect.value;
-            
-            // Очищаем текущие опции
             equipmentIdSelect.innerHTML = '';
-            
-            // Добавляем новые опции
             if (equipmentData[type] && equipmentData[type][station]) {
                 equipmentData[type][station].forEach(id => {
                     const option = document.createElement('option');
@@ -319,19 +291,9 @@
                     equipmentIdSelect.appendChild(option);
                 });
             }
-            
-            // Показываем/скрываем окно поправок в зависимости от выбранного типа
-            if (type === 'turbine') {
-                turbineCorrections.style.display = 'block';
-            } else {
-                turbineCorrections.style.display = 'none';
-            }
         }
         
-        // Инициализация при загрузке
         updateEquipmentList();
-        
-        // Обработчики изменений
         equipmentTypeSelect.addEventListener('change', updateEquipmentList);
         stationSelect.addEventListener('change', updateEquipmentList);
     </script>
