@@ -1,189 +1,81 @@
-<head>
-  ...
-  <style>
-    /* ДОБАВЛЕНО: контейнер для спидометров */
-    .gauges-container{
-      flex: 1;
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      justify-content: center;
-      padding: 8px 10px;
-      box-sizing: border-box;
-    }
-    .gauge-card{
-      background:#222;
-      border-radius:12px;
-      padding:12px 16px 8px;
-      box-shadow:0 2px 10px rgba(0,0,0,.35);
-      width: 320px;             /* можно уменьшить/увеличить */
-    }
-    .gauge-title{
-      margin:0 0 6px 0;
-      font-size:18px;
-      color:#ddd;
-      text-align:center;
-      letter-spacing:.3px;
-    }
-    .gauge-svg{
-      width:100%;
-      height:auto;
-      display:block;
-    }
-  </style>
-</head>
-<body>
-  <div style="margin-top: 5px;">
-    <div style="display:flex; width: 100%;">
-      <div class="rating-container">
-        <div>
-          <h2 style="margin-bottom: 10px;margin-top: 5px;">Рейтинг:</h2>
-          <select style="float: right;margin-top: 5px;" id="periodSelect" onchange="reloadPage()">
-            <option value="week">Неделя</option>
-            <option value="month">Месяц</option>
-            <option value="year">Год</option>
-          </select>
-        </div>
-      </div>
+<style>
+  /* можно подправить толщину дуги здесь */
+  .gauge-track { stroke: #3a3a3a; stroke-width: 22; fill: none; }
+  .gauge-progress { stroke-width: 22; fill: none; stroke-linecap: round; }
+  .gauge-value { font: 700 32px sans-serif; fill: #fff; text-anchor: middle; }
+  .gauge-unit  { font: 14px sans-serif; fill: #bdbdbd; text-anchor: middle; }
+</style>
 
-      <!-- ДОБАВЛЕНО: два статичных спидометра справа -->
-      <div class="gauges-container">
-        <div class="gauge-card">
-          <h3 class="gauge-title">Индекс 1</h3>
-          <svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
-        </div>
-        <div class="gauge-card">
-          <h3 class="gauge-title">Индекс 2</h3>
-          <svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
-        </div>
-      </div>
-      <!-- КОНЕЦ ДОБАВЛЕНИЯ -->
-    </div>
-  </div>
+<script>
+  function drawGauge(svgId, value){
+    const svg = d3.select('#'+svgId);
+    svg.selectAll('*').remove();
 
-  <div id="tooltip" class="tooltip"></div>
+    // Геометрия
+    const W = 360, H = 220;
+    const cx = W/2;
+    const r  = 100;                 // радиус дуги
+    const cy = r + 40;              // центр по Y, чтобы вся дуга попала в viewBox
+    svg.attr('viewBox', `0 0 ${W} ${H}`);
 
-  <script>
-    /* ... твой существующий код D3 / расчёта рейтингов ... */
+    // Углы полуокружности (верхняя половина)
+    const start = -Math.PI;         // слева
+    const end   = 0;                // справа
 
-    // ====== ДОБАВЛЕНО: функция отрисовки спидометра ======
-    function drawGauge(svgId, value, options={}){
-      const svg = d3.select('#'+svgId);
-      svg.selectAll('*').remove(); // на всякий случай
+    // Одна и та же траектория для трека и прогресса
+    const arcPath = d3.arc()
+      .innerRadius(r).outerRadius(r)
+      .startAngle(start).endAngle(end);
 
-      // Настройки
-      const W = 320, H = 180;
-      const cx = W/2, cy = 160;           // центр дуги
-      const rOuter = 130, rInner = 100;   // толщина дуги
-      const bgColor = '#3a3a3a';
-      const tickColor = '#888';
-      const labelColor = '#ddd';
-      const font = '12px sans-serif';
+    const g = svg.append('g').attr('transform', `translate(${cx},${cy})`);
 
-      // Градиент от красного к зелёному (через жёлтый)
-      const defs = svg.append('defs');
-      const gradId = `grad-${svgId}`;
-      const grad = defs.append('linearGradient')
-        .attr('id', gradId)
-        .attr('gradientUnits', 'userSpaceOnUse')
-        .attr('x1', cx - rOuter).attr('y1', cy)
-        .attr('x2', cx + rOuter).attr('y2', cy);
+    // Градиент для прогресса (красный -> жёлтый -> зелёный) по всей дуге
+    const defs = svg.append('defs');
+    const gradId = `grad-${svgId}`;
+    const grad = defs.append('linearGradient')
+      .attr('id', gradId)
+      .attr('gradientUnits', 'userSpaceOnUse')
+      .attr('x1', cx - r).attr('y1', cy)
+      .attr('x2', cx + r).attr('y2', cy);
+    grad.append('stop').attr('offset', '0%')  .attr('stop-color', '#ff2d2d');
+    grad.append('stop').attr('offset', '50%') .attr('stop-color', '#ffd400');
+    grad.append('stop').attr('offset', '100%').attr('stop-color', '#00d26a');
 
-      grad.append('stop').attr('offset', '0%').attr('stop-color', '#ff2d2d'); // красный
-      grad.append('stop').attr('offset', '50%').attr('stop-color', '#ffd400'); // жёлтый
-      grad.append('stop').attr('offset', '100%').attr('stop-color', '#00d26a'); // зелёный
+    // Фон (тонкая серая дуга)
+    const track = g.append('path')
+      .attr('d', arcPath)
+      .attr('class', 'gauge-track');
 
-      // Уголовая шкала: от -π до 0
-      const start = -Math.PI, end = 0;
-      const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
+    // Прогресс — та же дуга, но с dasharray
+    const progress = g.append('path')
+      .attr('d', arcPath)
+      .attr('class', 'gauge-progress')
+      .attr('stroke', `url(#${gradId})`);
 
-      // Фон дуги
-      const arc = d3.arc()
-        .innerRadius(rInner)
-        .outerRadius(rOuter)
-        .startAngle(start)
-        .endAngle(end);
+    // ВАЖНО: используем длину пути для равномерного заполнения всей дуги
+    const totalLen = progress.node().getTotalLength();
+    const clamped = Math.max(0, Math.min(100, value));
+    const filled  = totalLen * (clamped / 100);
 
-      svg.append('g')
-        .attr('transform', `translate(${cx},${cy})`)
-        .append('path')
-        .attr('d', arc)
-        .attr('fill', bgColor);
+    progress
+      .attr('stroke-dasharray', `${filled},${totalLen - filled}`)
+      .attr('stroke-dashoffset', 0);
 
-      // Прогресс-дуга (градиент)
-      const arcVal = d3.arc()
-        .innerRadius(rInner)
-        .outerRadius(rOuter)
-        .startAngle(start)
-        .endAngle(scale(Math.max(0, Math.min(100, value))));
+    // Значение в центре
+    svg.append('text')
+      .attr('class', 'gauge-value')
+      .attr('x', cx)
+      .attr('y', cy - 8)
+      .text(Math.round(clamped));
 
-      svg.append('g')
-        .attr('transform', `translate(${cx},${cy})`)
-        .append('path')
-        .attr('d', arcVal)
-        .attr('fill', `url(#${gradId})`)
-        .attr('filter', null);
+    svg.append('text')
+      .attr('class', 'gauge-unit')
+      .attr('x', cx)
+      .attr('y', cy + 18)
+      .text('%');
+  }
 
-      // Разметка/тики
-      const ticks = d3.range(0, 101, 10);
-      const tickGroup = svg.append('g').attr('transform', `translate(${cx},${cy})`);
-      ticks.forEach(t => {
-        const a = scale(t);
-        const r1 = rOuter + 2;
-        const r2 = rOuter + (t % 20 === 0 ? 12 : 8);
-        const x1 = Math.cos(a) * r1, y1 = Math.sin(a) * r1;
-        const x2 = Math.cos(a) * r2, y2 = Math.sin(a) * r2;
-        tickGroup.append('line')
-          .attr('x1', x1).attr('y1', y1)
-          .attr('x2', x2).attr('y2', y2)
-          .attr('stroke', tickColor)
-          .attr('stroke-width', t % 20 === 0 ? 2 : 1);
-      });
-
-      // Метки 0 и 100
-      svg.append('text')
-        .attr('x', cx - rOuter + 6)
-        .attr('y', cy + 18)
-        .attr('fill', labelColor)
-        .attr('font-family', 'sans-serif')
-        .attr('font-size', '12px')
-        .text('0');
-
-      svg.append('text')
-        .attr('x', cx + rOuter - 18)
-        .attr('y', cy + 18)
-        .attr('fill', labelColor)
-        .attr('font-family', 'sans-serif')
-        .attr('font-size', '12px')
-        .text('100');
-
-      // Значение по центру
-      svg.append('text')
-        .attr('x', cx)
-        .attr('y', cy - 10)
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#ffffff')
-        .attr('font-family', 'sans-serif')
-        .attr('font-size', '32px')
-        .attr('font-weight', '700')
-        .text(`${Math.round(value)}`);
-
-      // Подпись "%":
-      svg.append('text')
-        .attr('x', cx)
-        .attr('y', cy + 18)
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#bdbdbd')
-        .attr('font-family', 'sans-serif')
-        .attr('font-size', '14px')
-        .text('%');
-    }
-    // ====== КОНЕЦ ФУНКЦИИ СПИДОМЕТРА ======
-
-    // ... твой существующий код генерации карточек рейтинга ...
-
-    // ДОБАВЛЕНО: отрисуем два спидометра со значениями 70 и 85
-    drawGauge('gauge-1', 70);
-    drawGauge('gauge-2', 85);
-  </script>
-</body>
+  // Пример:
+  drawGauge('gauge-1', 70);
+  drawGauge('gauge-2', 85);
+</script>
