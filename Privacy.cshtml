@@ -1,339 +1,189 @@
-<div class="station-rating-formula">
-            <div class="formula-title">Рейтинг станции:</div>
-            <div class="formula">
-                $$R_{станция} = \frac{\sum_{i=1}^{n} R_i \cdot W_i}{\sum_{i=1}^{n} W_i}$$
-            </div>
-            <div class="description">
-                <ul>
-                    <li>\(R_i\) — рейтинг i-го оборудования на станции</li>
-                    <li>\(W_i\) — весовой коэффициент i-го оборудования (например, установленная мощность)</li>
-                    <li>\(n\) — количество оборудования на станции</li>
-                    <li>Рейтинг рассчитывается как средневзвешенное значение рейтингов всего оборудования станции</li>
-                    <li>Чем выше значение R, тем хуже общие показатели станции</li>
-                </ul>
-            </div>
-        </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-@using Newtonsoft.Json;
-
 <head>
-    <meta charset="UTF-8">
-    <title>Parameters</title>
-    <!-- MathJax -->
-    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-    <style>
-        body {
-            background-color: black;
-            color: white;
-            font-family: sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 5px;
-        }
-
-        h1 {
-            color: #dddddd;
-            font-size: 30px;
-            margin-bottom: 20px;
-        }
-
-        .formula-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .formula-section {
-            background-color: #222;
-            padding: 15px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        .formula-title {
-            font-size: 20px;
-            color: #dddddd;
-            margin-bottom: 5px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 5px;
-        }
-
-        .formula {
-            background-color: #333;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 5px;
-        }
-
-        .description {
-            font-size: 14px;
-            color: #cccccc;
-        }
-
-        .description ul {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .parameters-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .parameter-group {
-            background-color: #222;
-            padding: 15px;
-            flex: 1;
-            min-width: 300px;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #dddddd;
-        }
-
-        select, input {
-            width: 100%;
-            padding: 5px;
-            background-color: #333;
-            color: white;
-            border: 1px solid #444;
-            border-radius: 5px;
-        }
-
-        .btn-submit {
-            background-color: #fd817e;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-            margin-top: 15px;
-            width: 100%;
-        }
-
-        .btn-submit:hover {
-            background-color: #ff9a97;
-        }
-
-        .correction-window {
-            background-color: #2a2a2a;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #444;
-            margin-top: 10px;
-        }
-
-        .correction-title {
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #dddddd;
-        }
-
-        .correction-item {
-            margin-bottom: 8px;
-        }
-
-        .correction-label {
-            color: #aaaaaa;
-            display: block;
-            margin-bottom: 3px;
-        }
-        
-        .rating-formula {
-            background-color: #222;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-        }
-    </style>
+  ...
+  <style>
+    /* ДОБАВЛЕНО: контейнер для спидометров */
+    .gauges-container{
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 8px 10px;
+      box-sizing: border-box;
+    }
+    .gauge-card{
+      background:#222;
+      border-radius:12px;
+      padding:12px 16px 8px;
+      box-shadow:0 2px 10px rgba(0,0,0,.35);
+      width: 320px;             /* можно уменьшить/увеличить */
+    }
+    .gauge-title{
+      margin:0 0 6px 0;
+      font-size:18px;
+      color:#ddd;
+      text-align:center;
+      letter-spacing:.3px;
+    }
+    .gauge-svg{
+      width:100%;
+      height:auto;
+      display:block;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Параметры и формулы</h1>
-        
-        <div class="formula-container">
-            <div class="formula-section">
-                <div class="formula-title">Нормативный КПД котла:</div>
-                <div class="formula">
-                    $$\eta_{K(БР)}^{НОМ} = \eta_{K(БР)} - \Delta q_4^{W_P} - \Delta q_4^{A_R} + (t_{ХВ}^{Ф} - t_{ХВ}^{НОМ}) \cdot \Delta \eta_{K(БР)}^{ХВ}$$
-                </div>
-                <div class="description">
-                    <ul>
-                        <li>\(\eta_{K(БР)}\) — КПД котла брутто</li>
-                        <li>\(\Delta q_4^{W_P}\) — поправка к \(q_4\) на влажность угля</li>
-                        <li>\(\Delta q_4^{A_R}\) — поправка к \(q_4\) на зольность угля</li>
-                        <li>\(t_{ХВ}^{Ф}\) — фактическая температура холодного воздуха</li>
-                        <li>\(t_{ХВ}^{НОМ}\) — номинальная температура холодного воздуха</li>
-                        <li>\(\Delta \eta_{K(БР)}^{ХВ}\) — поправка к КПД на 1°C</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="formula-section">
-                <div class="formula-title">Нормативный УРТ турбины:</div>
-                <div class="formula">
-                    $$q_{T(БР)}^{НОМ} = q_{T(БР)}^{КР} - \Delta q_{T(БР)}^{vac}$$
-                </div>
-                <div class="description">
-                    <ul>
-                        <li>\(q_{T(БР)}^{КР}\) — удельный расход тепла брутто турбины на выработку электроэнергии после капремонта</li>
-                        <li>\(\Delta q_{T(БР)}^{vac}\) — поправка к удельному расходу тепла брутто на выработку электроэнергии на отклонение вакуума</li>
-                    </ul>
-                </div>
-            </div>
+  <div style="margin-top: 5px;">
+    <div style="display:flex; width: 100%;">
+      <div class="rating-container">
+        <div>
+          <h2 style="margin-bottom: 10px;margin-top: 5px;">Рейтинг:</h2>
+          <select style="float: right;margin-top: 5px;" id="periodSelect" onchange="reloadPage()">
+            <option value="week">Неделя</option>
+            <option value="month">Месяц</option>
+            <option value="year">Год</option>
+          </select>
         </div>
-        
-        <div class="rating-formula">
-            <div class="formula-title">Рейтинг станций:</div>
-            <div class="formula">
-                $$R = \frac{\eta_{K(БР)}^{НОМ} - \eta_{K(БР)}^{ФАКТ}}{\eta_{K(БР)}^{НОМ}} \times 100\%$$
-                $$R = \frac{q_{T(БР)}^{ФАКТ} - q_{T(БР)}^{НОМ}}{q_{T(БР)}^{НОМ}} \times 100\%$$
-            </div>
-            <div class="description">
-                <ul>
-                    <li>Для котлов: чем выше значение R, тем хуже работа оборудования (больше отклонение от норматива)</li>
-                    <li>Для турбин: чем выше значение R, тем хуже работа оборудования (больше отклонение от норматива)</li>
-                </ul>
-            </div>
+      </div>
+
+      <!-- ДОБАВЛЕНО: два статичных спидометра справа -->
+      <div class="gauges-container">
+        <div class="gauge-card">
+          <h3 class="gauge-title">Индекс 1</h3>
+          <svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
         </div>
-        
-        <form method="get" action="/Home/Index">
-            <div class="parameters-container">
-                <div class="parameter-group">
-                    <label for="station">Станция:</label>
-                    <select id="station" name="station">
-                        <option value="25">РГРЭС</option>
-                        <option value="9">ТУГРЭС</option>
-                        <option value="15">БГРЭС</option>
-                        <option value="1">НГРЭС</option>
-                        <option value="24">КГРЭС2</option>
-                        <option value="26">ПГРЭС</option>
-                    </select>
-
-                    <label for="equipmentId">Оборудование:</label>
-                    <select id="equipmentId" name="equipmentId"></select>
-                </div>
-
-                <div class="parameter-group">
-                    <label for="equipmentType">Тип оборудования:</label>
-                    <select id="equipmentType" name="equipmentType">
-                        <option value="boiler" selected>Котёл</option>
-                        <option value="turbine">Турбина</option>
-                    </select>
-
-                    <div class="correction-window" id="boilerCorrections">
-                        <div class="correction-title">Поправки для котла:</div>
-                        <div class="correction-item">
-                            <label class="correction-label">$$\Delta q_4^{W_P}$$</label>
-                            <input type="number" step="0.01" value="0" name="deltaQ4WP">
-                        </div>
-                        <div class="correction-item">
-                            <label class="correction-label">$$\Delta q_4^{A_R}$$</label>
-                            <input type="number" step="0.01" value="0" name="deltaQ4AR">
-                        </div>
-                        <div class="correction-item">
-                            <label class="correction-label">$$(t_{ХВ}^{Ф} - t_{ХВ}^{НОМ}) \cdot \Delta \eta_{K(БР)}^{ХВ}$$</label>
-                            <input type="number" step="0.01" value="0" name="deltaEtaColdAir">
-                        </div>
-                        <button type="submit" class="btn-submit">Применить параметры</button>
-                    </div>
-
-                    <div class="correction-window" id="turbineCorrections" style="display:none;">
-                        <div class="correction-title">Поправки для турбины:</div>
-                        <div class="correction-item">
-                            <label class="correction-label">$$\Delta q_{T(БР)}^{vac}$$</label>
-                            <input type="number" step="0.01" value="0" name="deltaQVac">
-                        </div>
-                        <button type="submit" class="btn-submit">Применить параметры</button>
-                    </div>
-                </div>
-            </div>
-        </form>
+        <div class="gauge-card">
+          <h3 class="gauge-title">Индекс 2</h3>
+          <svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+      </div>
+      <!-- КОНЕЦ ДОБАВЛЕНИЯ -->
     </div>
+  </div>
 
-    <script>
-        const equipmentTypeSelect = document.getElementById('equipmentType');
-        const stationSelect = document.getElementById('station');
-        const equipmentIdSelect = document.getElementById('equipmentId');
-        const boilerCorrections = document.getElementById('boilerCorrections');
-        const turbineCorrections = document.getElementById('turbineCorrections');
+  <div id="tooltip" class="tooltip"></div>
 
-        const equipmentData = {
-            turbine: {
-                25: ["1","2","3","4","5","6","7","8","9","10"],
-                9: ["1","2","3","4","5","6","7","8","9"],
-                15: ["1","2","3","4","5","6"],
-                1: ["1","2","3","4","5","6","7"],
-                24: ["1","2","3","4","5","6","7","8","9","10"],
-                26: ["1","2","3","4","5","6","7","8","9"]
-            },
-            boiler: {
-                25: ["01А","01Б","02А","02Б","03А","03Б","04А","04Б","05А","05Б","06А","06Б","07","08","09","10"],
-                9: ["01","02","03","04","05","06","07","08","09","10","11","12","13А","13Б","14А","14Б"],
-                15: ["01А","01Б","02А","02Б","03А","03Б","04А","04Б","05А","05Б","06А","06Б"],
-                1: ["01А","01Б","02А","02Б","03А","03Б","04А","04Б","05А","05Б","06А","06Б","07А","07Б"],
-                24: ["01А","01Б","02А","02Б","03А","03Б","04А","04Б","05А","05Б","06А","06Б","07А","07Б","08А","08Б","09А","09Б","10А","10Б"],
-                26: ["01А","01Б","02А","02Б","03А","03Б","04А","04Б","05","06","07","08","09"]
-            }
-        };
+  <script>
+    /* ... твой существующий код D3 / расчёта рейтингов ... */
 
-        function updateEquipmentList() {
-            const type = equipmentTypeSelect.value;
-            const station = stationSelect.value;
-            equipmentIdSelect.innerHTML = '';
-            if (equipmentData[type] && equipmentData[type][station]) {
-                equipmentData[type][station].forEach(id => {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = (type === 'turbine' ? 'ТА' : 'КА') + id;
-                    equipmentIdSelect.appendChild(option);
-                });
-            }
-            if (type === 'turbine') {
-                turbineCorrections.style.display = 'block';
-                boilerCorrections.style.display = 'none';
-            } else {
-                turbineCorrections.style.display = 'none';
-                boilerCorrections.style.display = 'block';
-            }
-            // Перерисовываем формулы MathJax
-            if (window.MathJax) {
-                MathJax.typesetPromise();
-            }
-        }
+    // ====== ДОБАВЛЕНО: функция отрисовки спидометра ======
+    function drawGauge(svgId, value, options={}){
+      const svg = d3.select('#'+svgId);
+      svg.selectAll('*').remove(); // на всякий случай
 
-        equipmentTypeSelect.addEventListener('change', updateEquipmentList);
-        stationSelect.addEventListener('change', updateEquipmentList);
+      // Настройки
+      const W = 320, H = 180;
+      const cx = W/2, cy = 160;           // центр дуги
+      const rOuter = 130, rInner = 100;   // толщина дуги
+      const bgColor = '#3a3a3a';
+      const tickColor = '#888';
+      const labelColor = '#ddd';
+      const font = '12px sans-serif';
 
-        // Первичная инициализация
-        updateEquipmentList();
-    </script>
+      // Градиент от красного к зелёному (через жёлтый)
+      const defs = svg.append('defs');
+      const gradId = `grad-${svgId}`;
+      const grad = defs.append('linearGradient')
+        .attr('id', gradId)
+        .attr('gradientUnits', 'userSpaceOnUse')
+        .attr('x1', cx - rOuter).attr('y1', cy)
+        .attr('x2', cx + rOuter).attr('y2', cy);
+
+      grad.append('stop').attr('offset', '0%').attr('stop-color', '#ff2d2d'); // красный
+      grad.append('stop').attr('offset', '50%').attr('stop-color', '#ffd400'); // жёлтый
+      grad.append('stop').attr('offset', '100%').attr('stop-color', '#00d26a'); // зелёный
+
+      // Уголовая шкала: от -π до 0
+      const start = -Math.PI, end = 0;
+      const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
+
+      // Фон дуги
+      const arc = d3.arc()
+        .innerRadius(rInner)
+        .outerRadius(rOuter)
+        .startAngle(start)
+        .endAngle(end);
+
+      svg.append('g')
+        .attr('transform', `translate(${cx},${cy})`)
+        .append('path')
+        .attr('d', arc)
+        .attr('fill', bgColor);
+
+      // Прогресс-дуга (градиент)
+      const arcVal = d3.arc()
+        .innerRadius(rInner)
+        .outerRadius(rOuter)
+        .startAngle(start)
+        .endAngle(scale(Math.max(0, Math.min(100, value))));
+
+      svg.append('g')
+        .attr('transform', `translate(${cx},${cy})`)
+        .append('path')
+        .attr('d', arcVal)
+        .attr('fill', `url(#${gradId})`)
+        .attr('filter', null);
+
+      // Разметка/тики
+      const ticks = d3.range(0, 101, 10);
+      const tickGroup = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+      ticks.forEach(t => {
+        const a = scale(t);
+        const r1 = rOuter + 2;
+        const r2 = rOuter + (t % 20 === 0 ? 12 : 8);
+        const x1 = Math.cos(a) * r1, y1 = Math.sin(a) * r1;
+        const x2 = Math.cos(a) * r2, y2 = Math.sin(a) * r2;
+        tickGroup.append('line')
+          .attr('x1', x1).attr('y1', y1)
+          .attr('x2', x2).attr('y2', y2)
+          .attr('stroke', tickColor)
+          .attr('stroke-width', t % 20 === 0 ? 2 : 1);
+      });
+
+      // Метки 0 и 100
+      svg.append('text')
+        .attr('x', cx - rOuter + 6)
+        .attr('y', cy + 18)
+        .attr('fill', labelColor)
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '12px')
+        .text('0');
+
+      svg.append('text')
+        .attr('x', cx + rOuter - 18)
+        .attr('y', cy + 18)
+        .attr('fill', labelColor)
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '12px')
+        .text('100');
+
+      // Значение по центру
+      svg.append('text')
+        .attr('x', cx)
+        .attr('y', cy - 10)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#ffffff')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '32px')
+        .attr('font-weight', '700')
+        .text(`${Math.round(value)}`);
+
+      // Подпись "%":
+      svg.append('text')
+        .attr('x', cx)
+        .attr('y', cy + 18)
+        .attr('text-anchor', 'middle')
+        .attr('fill', '#bdbdbd')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', '14px')
+        .text('%');
+    }
+    // ====== КОНЕЦ ФУНКЦИИ СПИДОМЕТРА ======
+
+    // ... твой существующий код генерации карточек рейтинга ...
+
+    // ДОБАВЛЕНО: отрисуем два спидометра со значениями 70 и 85
+    drawGauge('gauge-1', 70);
+    drawGauge('gauge-2', 85);
+  </script>
 </body>
-
