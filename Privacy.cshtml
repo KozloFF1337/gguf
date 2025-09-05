@@ -1,81 +1,154 @@
 <style>
-  /* можно подправить толщину дуги здесь */
-  .gauge-track { stroke: #3a3a3a; stroke-width: 22; fill: none; }
-  .gauge-progress { stroke-width: 22; fill: none; stroke-linecap: round; }
-  .gauge-value { font: 700 32px sans-serif; fill: #fff; text-anchor: middle; }
-  .gauge-unit  { font: 14px sans-serif; fill: #bdbdbd; text-anchor: middle; }
+  .mini-title{
+    margin: 8px 0 4px;
+    font-size: 14px;
+    color: #bdbdbd;
+    text-align: center;
+    letter-spacing: .2px;
+  }
+  .mini-svg{
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  /* стили прямоугольников */
+  .bar-track{ fill:#333; }
+  .bar-fill{  rx: 9; ry: 9; } /* скругление углов заполнения */
+  .bar-label{
+    fill:#bdbdbd; font: 12px/1 sans-serif; text-anchor:end; dominant-baseline:middle;
+  }
+  .bar-value{
+    fill:#e6e6e6; font: 12px/1 sans-serif; dominant-baseline:middle;
+  }
 </style>
 
+<div class="gauge-card">
+  <h3 class="gauge-title">Котлы</h3>
+  <svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
+
+  <!-- мини-гистограмма (слева) -->
+  <div class="mini-title">Котлы — по станциям</div>
+  <svg id="bars-boilers" class="mini-svg"></svg>
+</div>
+
+<div class="gauge-card">
+  <h3 class="gauge-title">Турбины</h3>
+  <svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
+
+  <!-- мини-гистограмма (справа) -->
+  <div class="mini-title">Турбины — по станциям</div>
+  <svg id="bars-turbines" class="mini-svg"></svg>
+</div>
+
 <script>
-  function drawGauge(svgId, value){
+  // --- утилита: плавный цвет от красного к зелёному по значению 0..100
+  const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
+  const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
+  function colorFor(v){
+    const t = Math.max(0, Math.min(1, v/100));
+    return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
+  }
+
+  // --- вычисляем компактные «оценки» 0..100 по станциям
+  // КОТЛЫ: score = (факт КПД / норм КПД)*100 (усечение 0..100), средневзвешенное по Production
+  function computeBoilerStationScores(){
+    const acc = {};
+    boilersData.forEach(item=>{
+      const sid = item.StationID;
+      const norm = (kpdvalues[sid] && kpdvalues[sid][item.BoilerID]) ? kpdvalues[sid][item.BoilerID] : 91;
+      const score = Math.max(0, Math.min(100, (item.KPD / norm) * 100));
+      const w = +item.Production || 1;
+      if(!acc[sid]) acc[sid] = {sum:0, wsum:0};
+      acc[sid].sum += score * w; acc[sid].wsum += w;
+    });
+    return Object.keys(acc).map(sid=>({
+      label: stations[sid],
+      value: acc[sid].wsum ? acc[sid].sum / acc[sid].wsum : 0
+    })).sort((a,b)=>b.value-a.value);
+  }
+
+  // ТУРБИНЫ: score = (норма URT / факт URT)*100 (чем ниже URT, тем выше score), средневзвешенное по Consumption
+  function computeTurbineStationScores(){
+    const acc = {};
+    turbinsData.forEach(item=>{
+      const sid = item.stationID;
+      const tid = parseInt(item.turbinID);
+      const norm = (urtvalues[sid] && urtvalues[sid][tid]) ? urtvalues[sid][tid] : 2300;
+      const score = Math.max(0, Math.min(100, (norm / item.URT) * 100));
+      const w = +item.Consumption || 1;
+      if(!acc[sid]) acc[sid] = {sum:0, wsum:0};
+      acc[sid].sum += score * w; acc[sid].wsum += w;
+    });
+    return Object.keys(acc).map(sid=>({
+      label: stations[sid],
+      value: acc[sid].wsum ? acc[sid].sum / acc[sid].wsum : 0
+    })).sort((a,b)=>b.value-a.value);
+  }
+
+  // --- отрисовка минималистичной горизонтальной гистограммы
+  // rows: [{label, value(0..100)}]
+  function drawMiniBars(svgId, rows, opts={}){
     const svg = d3.select('#'+svgId);
     svg.selectAll('*').remove();
 
-    // Геометрия
-    const W = 360, H = 220;
-    const cx = W/2;
-    const r  = 100;                 // радиус дуги
-    const cy = r + 40;              // центр по Y, чтобы вся дуга попала в viewBox
+    const barH = opts.barHeight ?? 18;
+    const gap  = opts.gap ?? 8;
+    const padL = opts.leftPad ?? 96;   // место под подписи слева
+    const padR = opts.rightPad ?? 40;  // место под числа справа
+    const padT = 8, padB = 12;
+
+    const W = 320; // базовая ширина viewBox (SVG будет растягиваться по ширине карточки)
+    const innerW = W - padL - padR;
+    const H = padT + rows.length*(barH+gap) - gap + padB;
+
     svg.attr('viewBox', `0 0 ${W} ${H}`);
 
-    // Углы полуокружности (верхняя половина)
-    const start = -Math.PI;         // слева
-    const end   = 0;                // справа
+    const x = d3.scaleLinear().domain([0,100]).range([0, innerW]);
 
-    // Одна и та же траектория для трека и прогресса
-    const arcPath = d3.arc()
-      .innerRadius(r).outerRadius(r)
-      .startAngle(start).endAngle(end);
+    // фоновые треки
+    const g = svg.append('g').attr('transform', `translate(${padL},${padT})`);
+    rows.forEach((d, i)=>{
+      const y = i*(barH+gap);
+      // трек
+      g.append('rect')
+        .attr('class','bar-track')
+        .attr('x',0).attr('y',y)
+        .attr('width', innerW).attr('height', barH)
+        .attr('rx', barH/2).attr('ry', barH/2);
+      // заполнение
+      g.append('rect')
+        .attr('class','bar-fill')
+        .attr('x',0).attr('y',y)
+        .attr('width', x(d.value)).attr('height', barH)
+        .attr('fill', colorFor(d.value))
+        .attr('rx', barH/2).attr('ry', barH/2);
+    });
 
-    const g = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+    // подписи слева
+    const labels = svg.append('g').attr('transform', `translate(${padL-8},${padT})`);
+    labels.selectAll('text').data(rows).enter().append('text')
+      .attr('class','bar-label')
+      .attr('x',0)
+      .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
+      .text(d=>d.label);
 
-    // Градиент для прогресса (красный -> жёлтый -> зелёный) по всей дуге
-    const defs = svg.append('defs');
-    const gradId = `grad-${svgId}`;
-    const grad = defs.append('linearGradient')
-      .attr('id', gradId)
-      .attr('gradientUnits', 'userSpaceOnUse')
-      .attr('x1', cx - r).attr('y1', cy)
-      .attr('x2', cx + r).attr('y2', cy);
-    grad.append('stop').attr('offset', '0%')  .attr('stop-color', '#ff2d2d');
-    grad.append('stop').attr('offset', '50%') .attr('stop-color', '#ffd400');
-    grad.append('stop').attr('offset', '100%').attr('stop-color', '#00d26a');
-
-    // Фон (тонкая серая дуга)
-    const track = g.append('path')
-      .attr('d', arcPath)
-      .attr('class', 'gauge-track');
-
-    // Прогресс — та же дуга, но с dasharray
-    const progress = g.append('path')
-      .attr('d', arcPath)
-      .attr('class', 'gauge-progress')
-      .attr('stroke', `url(#${gradId})`);
-
-    // ВАЖНО: используем длину пути для равномерного заполнения всей дуги
-    const totalLen = progress.node().getTotalLength();
-    const clamped = Math.max(0, Math.min(100, value));
-    const filled  = totalLen * (clamped / 100);
-
-    progress
-      .attr('stroke-dasharray', `${filled},${totalLen - filled}`)
-      .attr('stroke-dashoffset', 0);
-
-    // Значение в центре
-    svg.append('text')
-      .attr('class', 'gauge-value')
-      .attr('x', cx)
-      .attr('y', cy - 8)
-      .text(Math.round(clamped));
-
-    svg.append('text')
-      .attr('class', 'gauge-unit')
-      .attr('x', cx)
-      .attr('y', cy + 18)
-      .text('%');
+    // значения (внутри или сразу после заполнения — что ближе)
+    const vals = svg.append('g').attr('transform', `translate(${padL},${padT})`);
+    vals.selectAll('text').data(rows).enter().append('text')
+      .attr('class','bar-value')
+      .attr('x', d=>{
+        const w = x(d.value);
+        return w > 40 ? w - 8 : w + 8; // если полоса длинная — текст внутри справа, иначе снаружи
+      })
+      .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
+      .attr('text-anchor', d=> x(d.value) > 40 ? 'end' : 'start')
+      .text(d=> `${d.value.toFixed(0)}%`);
   }
 
-  // Пример:
-  drawGauge('gauge-1', 70);
-  drawGauge('gauge-2', 85);
+  // --- данные и отрисовка
+  const boilerBars  = computeBoilerStationScores();   // [{label, value}]
+  const turbineBars = computeTurbineStationScores();  // [{label, value}]
+
+  drawMiniBars('bars-boilers',  boilerBars);
+  drawMiniBars('bars-turbines', turbineBars);
 </script>
