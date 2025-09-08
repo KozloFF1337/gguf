@@ -1,105 +1,66 @@
-<style>
-  /* Ряд со спидометрами */
-.gauges-container{
-  flex: 1 1 auto;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 8px 10px;
-  box-sizing: border-box;
-  flex-wrap: wrap;              /* позволяет перенос на узких экранах */
+/* карточки для гистограмм у тебя уже есть (.bar-card) */
+.mini-legend{
+  display:flex; gap:14px; justify-content:center; align-items:center;
+  color:#bdbdbd; font:12px/1 sans-serif; margin: 2px 0 8px;
 }
+.sw{ width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:6px; }
+.sw-a{ background:#00d26a; }   /* Серия 1 */
+.sw-b{ background:#ffd400; }   /* Серия 2 */
 
-/* Ряд с гистограммами */
-.bars-container{
-  flex: 1 1 auto;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 8px 10px;
-  box-sizing: border-box;
-  margin-top: 10px;
-  flex-wrap: wrap;              /* тоже перенос */
+.bar-track{ fill:#333; }       /* фон дорожки */
+.barA-fill{ fill:#00d26a; }    /* верхняя полоса */
+.barB-fill{ fill:#ffd400; }    /* нижняя полоса */
+.bar-label{
+  fill:#bdbdbd; font:12px/1 sans-serif;
+  text-anchor:end; dominant-baseline:middle;
 }
-
-/* Карточки должны быть резиновыми, а не фиксированные 320px */
-.gauge-card,
-.bar-card{
-  /* ширина «зажата» между минимумом и максимумом и растёт от окна */
-  width: clamp(280px, 48vw, 640px);
-  flex: 1 1 clamp(280px, 48vw, 640px);
-  background:#222;
-  border-radius:12px;
-  padding:12px 16px 14px;
-  box-shadow:0 2px 10px rgba(0,0,0,.35);
+.bar-value{
+  fill:#e6e6e6; font:12px/1 sans-serif;
+  dominant-baseline:middle;
 }
+<div class="bar-card">
+  <div class="mini-title">Гистограмма — Котлы</div>
+  <div class="mini-legend"><span class="sw sw-a"></span>Серия 1 <span class="sw sw-b"></span>Серия 2</div>
+  <svg id="bars-left" class="mini-svg"></svg>
+</div>
 
-/* Заголовки и сами SVG уже тянутся за счёт width:100% и viewBox */
-.gauge-svg,
-.mini-svg{
-  width: 100%;
-  height: auto;                 /* высота следует из viewBox */
-  display: block;
-}
-
-/* (опционально) — если хочешь фиксированную толщину линий при масштабировании
-.gauge-track, .gauge-progress{ vector-effect: non-scaling-stroke; }
-*/
-
-</style>
-<!-- Ряд с двумя отдельными карточками-гистограммами -->
-<div class="bars-container">
-  <div class="bar-card">
-    <div class="mini-title">Гистограмма — Котлы</div>
-    <svg id="bars-left" class="mini-svg"></svg>
-  </div>
-  <div class="bar-card">
-    <div class="mini-title">Гистограмма — Турбины</div>
-    <svg id="bars-right" class="mini-svg"></svg>
-  </div>
+<div class="bar-card">
+  <div class="mini-title">Гистограмма — Турбины</div>
+  <div class="mini-legend"><span class="sw sw-a"></span>Серия 1 <span class="sw sw-b"></span>Серия 2</div>
+  <svg id="bars-right" class="mini-svg"></svg>
 </div>
 <script>
-  // ----- КОНСТАНТНЫЕ ДАННЫЕ (правь как нужно) -----
-  const LEFT_BARS = [
-    { label: 'Показатель A', value: 72 },
-    { label: 'Показатель B', value: 45 },
-    { label: 'Показатель C', value: 88 },
-    { label: 'Показатель D', value: 31 },
-    { label: 'Показатель E', value: 64 },
-    { label: 'Показатель F', value: 53 },
+  // ===== Константные данные (две серии на показатель) =====
+  const LEFT_BARS2 = [
+    { label: 'Показатель A', a: 72, b: 61 },
+    { label: 'Показатель B', a: 45, b: 58 },
+    { label: 'Показатель C', a: 88, b: 80 },
+    { label: 'Показатель D', a: 31, b: 44 },
+    { label: 'Показатель E', a: 64, b: 69 },
+    { label: 'Показатель F', a: 53, b: 49 },
   ];
-  const RIGHT_BARS = [
-    { label: 'Показатель A', value: 25 },
-    { label: 'Показатель B', value: 90 },
-    { label: 'Показатель C', value: 61 },
-    { label: 'Показатель D', value: 77 },
-    { label: 'Показатель E', value: 34 },
-    { label: 'Показатель F', value: 55 },
+  const RIGHT_BARS2 = [
+    { label: 'Показатель A', a: 25, b: 39 },
+    { label: 'Показатель B', a: 90, b: 83 },
+    { label: 'Показатель C', a: 61, b: 66 },
+    { label: 'Показатель D', a: 77, b: 72 },
+    { label: 'Показатель E', a: 34, b: 41 },
+    { label: 'Показатель F', a: 55, b: 50 },
   ];
 
-  // ----- плавный цвет от красного к зелёному по значению 0..100 -----
-  const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
-  const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
-  function colorFor(v){
-    const t = Math.max(0, Math.min(1, v/100));
-    return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
-  }
-
-  // ----- минималистичная горизонтальная гистограмма -----
-  // rows: [{label, value(0..100)}]
-  function drawMiniBars(svgId, rows, opts={}){
+  // ===== Рендер двойной горизонтальной гистограммы =====
+  // rows: [{label, a(0..100), b(0..100)}]
+  function drawDualBars(svgId, rows, opts={}){
     const svg = d3.select('#'+svgId);
     svg.selectAll('*').remove();
 
-    const barH = opts.barHeight ?? 18;
-    const gap  = opts.gap ?? 8;
-    const padL = opts.leftPad ?? 96;   // место под подписи слева
-    const padR = opts.rightPad ?? 40;  // место под числа справа
+    const barH = opts.barHeight ?? 22;   // общая высота дорожки
+    const gap  = opts.gap ?? 10;
+    const padL = opts.leftPad ?? 100;    // место под подписи слева
+    const padR = opts.rightPad ?? 56;    // место под числа справа
     const padT = 8, padB = 12;
 
-    const W = 320; // ширина viewBox под карточку
+    const W = 320;                       // viewBox — SVG сам адаптивный
     const innerW = W - padL - padR;
     const H = padT + rows.length*(barH+gap) - gap + padB;
 
@@ -111,22 +72,33 @@
 
     rows.forEach((d, i)=>{
       const y = i*(barH+gap);
-      // фон
+
+      // фон (единый трек)
       g.append('rect')
         .attr('class','bar-track')
         .attr('x',0).attr('y',y)
         .attr('width', innerW).attr('height', barH)
         .attr('rx', barH/2).attr('ry', barH/2);
-      // заливка
+
+      // верхняя полоса — Серия 1
+      const half = (barH/2)-2;
       g.append('rect')
-        .attr('class','bar-fill')
-        .attr('x',0).attr('y',y)
-        .attr('width', x(d.value)).attr('height', barH)
-        .attr('fill', colorFor(d.value))
-        .attr('rx', barH/2).attr('ry', barH/2);
+        .attr('class','barA-fill')
+        .attr('x',0).attr('y',y + 1)
+        .attr('width', x(Math.max(0, Math.min(100, d.a))))
+        .attr('height', half)
+        .attr('rx', half).attr('ry', half);
+
+      // нижняя полоса — Серия 2
+      g.append('rect')
+        .attr('class','barB-fill')
+        .attr('x',0).attr('y',y + barH - 1 - half)
+        .attr('width', x(Math.max(0, Math.min(100, d.b))))
+        .attr('height', half)
+        .attr('rx', half).attr('ry', half);
     });
 
-    // подписи слева
+    // подписи показателей слева
     const labels = svg.append('g').attr('transform', `translate(${padL-8},${padT})`);
     labels.selectAll('text').data(rows).enter().append('text')
       .attr('class','bar-label')
@@ -134,21 +106,17 @@
       .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
       .text(d=>d.label);
 
-    // значения %
-    const vals = svg.append('g').attr('transform', `translate(${padL},${padT})`);
+    // значения справа "a% / b%"
+    const vals = svg.append('g').attr('transform', `translate(${padL + innerW + 6},${padT})`);
     vals.selectAll('text').data(rows).enter().append('text')
       .attr('class','bar-value')
-      .attr('x', d=>{
-        const w = x(d.value);
-        return w > 40 ? w - 8 : w + 8; // если полоса длинная — текст внутри, иначе снаружи
-      })
+      .attr('x',0)
       .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-      .attr('text-anchor', d=> x(d.value) > 40 ? 'end' : 'start')
-      .text(d=> `${Math.round(d.value)}%`);
+      .attr('text-anchor','start')
+      .text(d=> `${Math.round(d.a)}% / ${Math.round(d.b)}%`);
   }
 
-  // ----- рисуем две независимые гистограммы (на отдельных карточках) -----
-  drawMiniBars('bars-left',  LEFT_BARS);
-  drawMiniBars('bars-right', RIGHT_BARS);
+  // ===== рендерим две независимые карточки-гистограммы =====
+  drawDualBars('bars-left',  LEFT_BARS2);
+  drawDualBars('bars-right', RIGHT_BARS2);
 </script>
-
