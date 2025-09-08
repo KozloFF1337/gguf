@@ -1,22 +1,16 @@
-/* Вертикальная линия-ось слева */
-.origin-line{
-  stroke:#666;
-  stroke-width:1.5;
-  shape-rendering:crispEdges;
-}
-/* не клипать подписи/значения */
-.mini-svg{ overflow: visible; }
 <script>
-// Форматирование чисел и общий максимум — оставь свои, либо используй эти:
-const fmtInt = d3.format(",");
-const fmtTU  = v => fmtInt(Math.round(+v||0)).replace(/,/g," "); // 1 234
+// формат числа "1 234"
+const _fmtInt = d3.format(",");
+const fmtTU = v => _fmtInt(Math.round(+v||0)).replace(/,/g," ");
+
+// общий максимум (если нужно)
 function computeSharedMax(datasets){
   let m = 0;
   datasets.forEach(rows => rows.forEach(d => { m = Math.max(m, +d.a||0, +d.b||0); }));
   return m * 1.05; // небольшой запас
 }
 
-// Рисуем двойные полосы от оси влево, с правым скруглением и значением сразу за полосой
+// ДВОЙНЫЕ БАРЫ: линия слева, подпись перед линией, бары вправо (левый край прямой, правый скруглён)
 // rows: [{label, a, b}], opts: {sharedMax, unit, barHeight, gap}
 function drawDualBars(svgId, rows, opts = {}) {
   const UNIT = opts.unit || 'ТУТ';
@@ -24,20 +18,19 @@ function drawDualBars(svgId, rows, opts = {}) {
   const svg = d3.select('#'+svgId);
   svg.selectAll('*').remove();
 
-  const barH = opts.barHeight ?? 22;     // общая «дорожка»
+  const barH = opts.barHeight ?? 22;   // высота дорожки
   const gap  = opts.gap ?? 10;
-  const minPadVal = 70;                  // минимум слева под числа
-  const minPadLbl = 90;                  // минимум справа под подписи
+  const minPadLbl = 90;                // минимум слева под подпись показателя
+  const minPadVal = 70;                // минимум справа под вывод значений
   const padT = 8, padB = 12;
-  const W = 320;                         // viewBox (SVG тянется по width:100%)
+  const W = 320;                       // viewBox — SVG резиновый
 
-  // 1) Замеряем реальные ширины чисел (для левого поля) и подписей (для правого)
+  // 1) замеряем реальные ширины подписей и значений
   const meas = svg.append('g').attr('opacity', 0);
-  const mLabel = meas.append('text').attr('class','bar-label').attr('x',0).attr('y',0);
-  const mValue = meas.append('text').attr('class','bar-value').attr('x',0).attr('y',0);
+  const mLabel = meas.append('text').attr('class','bar-label');
+  const mValue = meas.append('text').attr('class','bar-value');
 
   const labelTexts = rows.map(d => d.label);
-  // два значения на показатель — меряем оба, берём максимальное
   const valueTexts = rows.flatMap(d => [ `${fmtTU(d.a)} ${UNIT}`, `${fmtTU(d.b)} ${UNIT}` ]);
 
   const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
@@ -47,86 +40,83 @@ function drawDualBars(svgId, rows, opts = {}) {
   let maxValueW = 0; valueTexts.forEach(s => maxValueW = Math.max(maxValueW, wValue(s)));
   meas.remove();
 
-  // Левый паддинг — под числа; правый — под подписи
-  let padVal = Math.max(minPadVal, Math.ceil(maxValueW) + 10);
+  // поля: слева под подпись, справа под числа
   let padLbl = Math.max(minPadLbl, Math.ceil(maxLabelW) + 12);
+  let padVal = Math.max(minPadVal, Math.ceil(maxValueW) + 10);
 
-  // запас под сами бары
+  // гарантированный минимум ширины под бары
   const minBarW = 100;
-  padVal = Math.min(padVal, W - padLbl - minBarW);
+  padLbl = Math.min(padLbl, W - padVal - minBarW);
 
-  // Итоговые размеры
-  const innerBarW = Math.max(minBarW, W - padVal - padLbl);
+  const innerW = Math.max(minBarW, W - padLbl - padVal);
   const H = padT + rows.length*(barH+gap) - gap + padB;
-
   svg.attr('viewBox', `0 0 ${W} ${H}`);
 
-  // Координатная система: ось в x=0, бары уходят влево (отрицательные x)
-  const g = svg.append('g').attr('transform', `translate(${padVal + innerBarW},${padT})`);
+  // ось в x = padLbl
+  const axisX = padLbl;
 
-  // Общий масштаб по X
+  // общий масштаб по X
   const xMax = opts.sharedMax ?? computeSharedMax([rows]);
-  const x = d3.scaleLinear().domain([0, xMax]).range([0, innerBarW]);
+  const x = d3.scaleLinear().domain([0, xMax]).range([0, innerW]);
 
-  // Вертикальная линия-ось
+  // линия-ось
   svg.append('line')
     .attr('class','origin-line')
-    .attr('x1', padVal + innerBarW).attr('y1', padT - 2)
-    .attr('x2', padVal + innerBarW).attr('y2', padT + rows.length*(barH+gap) - gap + 2);
+    .attr('x1', axisX).attr('y1', padT - 2)
+    .attr('x2', axisX).attr('y2', padT + rows.length*(barH+gap) - gap + 2);
 
-  // Утилита: path «прямо слева — скруглено справа»
-  function pillRightPath(yTop, height, width){
+  const g = svg.append('g').attr('transform', `translate(${axisX},${padT})`);
+
+  // path: прямой левый край (у оси), правый скруглён
+  function pillRight(yTop, height, width){
     const w = Math.max(0, +width||0);
     if (w <= 0) return '';
     const r = Math.min(height/2, w);
-    const xL = -w, xR = 0, xRm = -r;
+    const xL = 0, xR = w, xRm = w - r;
     const yT = yTop, yB = yTop + height;
-    // M xL,yT H xRm Q 0,yT 0,yT+r V 0,yB-r Q 0,yB xRm,yB H xL Z
-    return `M ${xL},${yT} H ${xRm} Q ${xR},${yT} ${xR},${yT+r} V ${yB-r} Q ${xR},${yB} ${xRm},${yB} H ${xL} Z`;
+    // M 0,yT H w-r Q w,yT w,yT+r V w,yB-r Q w,yB w-r,yB H 0 Z
+    return `M ${xL},${yT} H ${xRm} Q ${xR},${yT} ${xR},${yT+r} V ${xR},${yB-r} Q ${xR},${yB} ${xRm},${yB} H ${xL} Z`;
   }
 
   rows.forEach((d,i)=>{
     const y = i*(barH+gap);
-
-    // Фон-дорожка (необязательно, но помогает читабельности)
-    const trackPath = pillRightPath(y, barH, innerBarW);
-    g.append('path').attr('d', trackPath).attr('class','bar-track');
-
     const half = (barH/2) - 2;
 
-    // Серия 1 (верх)
+    // фон-дорожка (на всю ширину вправо)
+    const trackPath = pillRight(y, barH, innerW);
+    g.append('path').attr('d', trackPath).attr('class','bar-track');
+
+    // серия 1 (верх)
     const aW = x(Math.max(0, +d.a||0));
-    const aPath = pillRightPath(y + 1, half, aW);
-    g.append('path').attr('d', aPath).attr('class','barA-fill');
+    g.append('path').attr('d', pillRight(y + 1, half, aW)).attr('class','barA-fill');
 
-    // Серия 2 (низ)
+    // серия 2 (низ)
     const bW = x(Math.max(0, +d.b||0));
-    const bPath = pillRightPath(y + barH - 1 - half, half, bW);
-    g.append('path').attr('d', bPath).attr('class','barB-fill');
+    g.append('path').attr('d', pillRight(y + barH - 1 - half, half, bW)).attr('class','barB-fill');
 
-    // Значение сразу «после» полосы — слева от неё, по центру соответствующей половины
+    // значения — сразу ПОСЛЕ соответствующей полосы (справа от неё)
     g.append('text')
       .attr('class','bar-value')
-      .attr('x', -aW - 8)                         // немного левее конца
+      .attr('x', aW + 8)
       .attr('y', y + 1 + half/2 + .5)
-      .attr('text-anchor','end')
+      .attr('text-anchor','start')
       .text(`${fmtTU(d.a)} ${UNIT}`);
 
     g.append('text')
       .attr('class','bar-value')
-      .attr('x', -bW - 8)
+      .attr('x', bW + 8)
       .attr('y', y + barH - 1 - half + half/2 + .5)
-      .attr('text-anchor','end')
+      .attr('text-anchor','start')
       .text(`${fmtTU(d.b)} ${UNIT}`);
   });
 
-  // Подписи показателей — справа от оси
-  const labelsG = svg.append('g').attr('transform', `translate(${padVal + innerBarW + 8},${padT})`);
+  // подписи показателей — ПЕРЕД линией, справа выравниваем к оси
+  const labelsG = svg.append('g').attr('transform', `translate(${axisX - 8},${padT})`);
   labelsG.selectAll('text').data(rows).enter().append('text')
     .attr('class','bar-label')
     .attr('x', 0)
     .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-    .attr('text-anchor', 'start')
+    .attr('text-anchor', 'end')
     .text(d=> d.label);
 }
 </script>
