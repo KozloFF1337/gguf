@@ -1,122 +1,117 @@
-/* карточки для гистограмм у тебя уже есть (.bar-card) */
-.mini-legend{
-  display:flex; gap:14px; justify-content:center; align-items:center;
-  color:#bdbdbd; font:12px/1 sans-serif; margin: 2px 0 8px;
-}
-.sw{ width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:6px; }
-.sw-a{ background:#00d26a; }   /* Серия 1 */
-.sw-b{ background:#ffd400; }   /* Серия 2 */
-
-.bar-track{ fill:#333; }       /* фон дорожки */
-.barA-fill{ fill:#00d26a; }    /* верхняя полоса */
-.barB-fill{ fill:#ffd400; }    /* нижняя полоса */
-.bar-label{
-  fill:#bdbdbd; font:12px/1 sans-serif;
-  text-anchor:end; dominant-baseline:middle;
-}
-.bar-value{
-  fill:#e6e6e6; font:12px/1 sans-serif;
-  dominant-baseline:middle;
-}
-<div class="bar-card">
-  <div class="mini-title">Гистограмма — Котлы</div>
-  <div class="mini-legend"><span class="sw sw-a"></span>Серия 1 <span class="sw sw-b"></span>Серия 2</div>
-  <svg id="bars-left" class="mini-svg"></svg>
-</div>
-
-<div class="bar-card">
-  <div class="mini-title">Гистограмма — Турбины</div>
-  <div class="mini-legend"><span class="sw sw-a"></span>Серия 1 <span class="sw sw-b"></span>Серия 2</div>
-  <svg id="bars-right" class="mini-svg"></svg>
-</div>
 <script>
-  // ===== Константные данные (две серии на показатель) =====
-  const LEFT_BARS2 = [
-    { label: 'Показатель A', a: 72, b: 61 },
-    { label: 'Показатель B', a: 45, b: 58 },
-    { label: 'Показатель C', a: 88, b: 80 },
-    { label: 'Показатель D', a: 31, b: 44 },
-    { label: 'Показатель E', a: 64, b: 69 },
-    { label: 'Показатель F', a: 53, b: 49 },
-  ];
-  const RIGHT_BARS2 = [
-    { label: 'Показатель A', a: 25, b: 39 },
-    { label: 'Показатель B', a: 90, b: 83 },
-    { label: 'Показатель C', a: 61, b: 66 },
-    { label: 'Показатель D', a: 77, b: 72 },
-    { label: 'Показатель E', a: 34, b: 41 },
-    { label: 'Показатель F', a: 55, b: 50 },
-  ];
-
-  // ===== Рендер двойной горизонтальной гистограммы =====
   // rows: [{label, a(0..100), b(0..100)}]
-  function drawDualBars(svgId, rows, opts={}){
-    const svg = d3.select('#'+svgId);
+  function drawDualBars(svgId, rows, opts = {}) {
+    const svg = d3.select('#' + svgId);
     svg.selectAll('*').remove();
 
-    const barH = opts.barHeight ?? 22;   // общая высота дорожки
+    // Базовая геометрия
+    const barH = opts.barHeight ?? 22;     // общая «дорожка»
     const gap  = opts.gap ?? 10;
-    const padL = opts.leftPad ?? 100;    // место под подписи слева
-    const padR = opts.rightPad ?? 56;    // место под числа справа
+    const minPadL = opts.leftPad ?? 100;   // минимальные отступы
+    const minPadR = opts.rightPad ?? 56;
     const padT = 8, padB = 12;
 
-    const W = 320;                       // viewBox — SVG сам адаптивный
-    const innerW = W - padL - padR;
-    const H = padT + rows.length*(barH+gap) - gap + padB;
+    // Ширина viewBox; сам SVG тянется по width:100%
+    const W = 320;
+
+    // --- 1) Замеряем реальные ширины подписей/значений, чтобы подобрать паддинги
+    const measureG = svg.append('g').attr('opacity', 0);
+    const mLabel = measureG.append('text').attr('class', 'bar-label').attr('x', 0).attr('y', 0);
+    const mValue = measureG.append('text').attr('class', 'bar-value').attr('x', 0).attr('y', 0);
+
+    const labels = rows.map(d => d.label);
+    const valStr = rows.map(d => {
+      const a = Math.round(Math.max(0, Math.min(100, d.a)));
+      const b = Math.round(Math.max(0, Math.min(100, d.b)));
+      return `${a}% / ${b}%`;
+    });
+
+    const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
+    const wValue = s => { mValue.text(s); return mValue.node().getComputedTextLength(); };
+
+    let maxLabelW = 0; labels.forEach(s => maxLabelW = Math.max(maxLabelW, wLabel(s)));
+    let maxValueW = 0; valStr.forEach(s => maxValueW = Math.max(maxValueW, wValue(s)));
+
+    let padL = Math.max(minPadL, Math.ceil(maxLabelW) + 14);
+    let padR = Math.max(minPadR, Math.ceil(maxValueW) + 8);
+
+    // Страхуемся: оставим минимум ширины под сами бары
+    const minInnerW = 80;
+    padL = Math.min(padL, W - padR - minInnerW);
+
+    // Если после ограничения подписи не влазят — аккуратно укорачиваем с «…»
+    const availLabelW = padL - 12;
+    function fitLabelToWidth(s) {
+      if (wLabel(s) <= availLabelW) return s;
+      let cut = s.trim();
+      while (cut.length > 1 && wLabel(cut + '…') > availLabelW) {
+        const i = cut.lastIndexOf(' ');
+        cut = i > 0 ? cut.slice(0, i) : cut.slice(0, cut.length - 1);
+      }
+      return cut + '…';
+    }
+    const fittedLabels = labels.map(fitLabelToWidth);
+
+    // Больше не нужны — можно удалить
+    measureG.remove();
+
+    // Итоговые размеры
+    const innerW = Math.max(minInnerW, W - padL - padR);
+    const H = padT + rows.length * (barH + gap) - gap + padB;
 
     svg.attr('viewBox', `0 0 ${W} ${H}`);
 
-    const x = d3.scaleLinear().domain([0,100]).range([0, innerW]);
+    const x = d3.scaleLinear().domain([0, 100]).range([0, innerW]);
 
     const g = svg.append('g').attr('transform', `translate(${padL},${padT})`);
 
-    rows.forEach((d, i)=>{
-      const y = i*(barH+gap);
+    rows.forEach((d, i) => {
+      const y = i * (barH + gap);
 
-      // фон (единый трек)
+      // Фон дорожки
       g.append('rect')
-        .attr('class','bar-track')
-        .attr('x',0).attr('y',y)
+        .attr('class', 'bar-track')
+        .attr('x', 0).attr('y', y)
         .attr('width', innerW).attr('height', barH)
-        .attr('rx', barH/2).attr('ry', barH/2);
+        .attr('rx', barH / 2).attr('ry', barH / 2);
 
-      // верхняя полоса — Серия 1
-      const half = (barH/2)-2;
+      // Верхняя полоса (Серия 1)
+      const half = (barH / 2) - 2;
+      const aVal = Math.max(0, Math.min(100, +d.a || 0));
       g.append('rect')
-        .attr('class','barA-fill')
-        .attr('x',0).attr('y',y + 1)
-        .attr('width', x(Math.max(0, Math.min(100, d.a))))
-        .attr('height', half)
+        .attr('class', 'barA-fill')
+        .attr('x', 0).attr('y', y + 1)
+        .attr('width', x(aVal)).attr('height', half)
         .attr('rx', half).attr('ry', half);
 
-      // нижняя полоса — Серия 2
+      // Нижняя полоса (Серия 2)
+      const bVal = Math.max(0, Math.min(100, +d.b || 0));
       g.append('rect')
-        .attr('class','barB-fill')
-        .attr('x',0).attr('y',y + barH - 1 - half)
-        .attr('width', x(Math.max(0, Math.min(100, d.b))))
-        .attr('height', half)
+        .attr('class', 'barB-fill')
+        .attr('x', 0).attr('y', y + barH - 1 - half)
+        .attr('width', x(bVal)).attr('height', half)
         .attr('rx', half).attr('ry', half);
     });
 
-    // подписи показателей слева
-    const labels = svg.append('g').attr('transform', `translate(${padL-8},${padT})`);
-    labels.selectAll('text').data(rows).enter().append('text')
-      .attr('class','bar-label')
-      .attr('x',0)
-      .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-      .text(d=>d.label);
+    // Подписи слева
+    const labelsG = svg.append('g').attr('transform', `translate(${padL - 8},${padT})`);
+    labelsG.selectAll('text').data(fittedLabels).enter().append('text')
+      .attr('class', 'bar-label')
+      .attr('x', 0)
+      .attr('y', (_, i) => i * (barH + gap) + barH / 2 + .5)
+      .text(d => d);
 
-    // значения справа "a% / b%"
-    const vals = svg.append('g').attr('transform', `translate(${padL + innerW + 6},${padT})`);
-    vals.selectAll('text').data(rows).enter().append('text')
-      .attr('class','bar-value')
-      .attr('x',0)
-      .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-      .attr('text-anchor','start')
-      .text(d=> `${Math.round(d.a)}% / ${Math.round(d.b)}%`);
+    // Значения справа
+    const valsG = svg.append('g').attr('transform', `translate(${padL + innerW + 6},${padT})`);
+    valsG.selectAll('text').data(valStr).enter().append('text')
+      .attr('class', 'bar-value')
+      .attr('x', 0)
+      .attr('y', (_, i) => i * (barH + gap) + barH / 2 + .5)
+      .attr('text-anchor', 'start')
+      .text(d => d);
   }
 
-  // ===== рендерим две независимые карточки-гистограммы =====
-  drawDualBars('bars-left',  LEFT_BARS2);
-  drawDualBars('bars-right', RIGHT_BARS2);
+  // Пример вызовов (оставь как у тебя):
+  // drawDualBars('bars-left',  LEFT_BARS2);
+  // drawDualBars('bars-right', RIGHT_BARS2);
 </script>
