@@ -11,37 +11,54 @@
     height: auto;
     display: block;
   }
-  /* стили прямоугольников */
-  .bar-track{ fill:#333; }
-  .bar-fill{  rx: 9; ry: 9; } /* скругление углов заполнения */
+  .bar-track{ fill:#333; }                /* фон дорожки */
+  .bar-fill{  rx: 9; ry: 9; }             /* скругление заливки */
   .bar-label{
-    fill:#bdbdbd; font: 12px/1 sans-serif; text-anchor:end; dominant-baseline:middle;
+    fill:#bdbdbd; font: 12px/1 sans-serif;
+    text-anchor:end; dominant-baseline:middle;
   }
   .bar-value{
-    fill:#e6e6e6; font: 12px/1 sans-serif; dominant-baseline:middle;
+    fill:#e6e6e6; font: 12px/1 sans-serif;
+    dominant-baseline:middle;
   }
 </style>
-
+<!-- Левая карточка -->
 <div class="gauge-card">
   <h3 class="gauge-title">Котлы</h3>
   <svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
 
-  <!-- мини-гистограмма (слева) -->
-  <div class="mini-title">Котлы — по станциям</div>
-  <svg id="bars-boilers" class="mini-svg"></svg>
+  <div class="mini-title">Гистограмма</div>
+  <svg id="bars-left" class="mini-svg"></svg>
 </div>
 
+<!-- Правая карточка -->
 <div class="gauge-card">
   <h3 class="gauge-title">Турбины</h3>
   <svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
 
-  <!-- мини-гистограмма (справа) -->
-  <div class="mini-title">Турбины — по станциям</div>
-  <svg id="bars-turbines" class="mini-svg"></svg>
+  <div class="mini-title">Гистограмма</div>
+  <svg id="bars-right" class="mini-svg"></svg>
 </div>
-
 <script>
-  // --- утилита: плавный цвет от красного к зелёному по значению 0..100
+  // --- КОНСТАНТНЫЕ ДАННЫЕ (правь как нужно) ---
+  const LEFT_BARS = [
+    { label: 'Показатель A', value: 72 },
+    { label: 'Показатель B', value: 45 },
+    { label: 'Показатель C', value: 88 },
+    { label: 'Показатель D', value: 31 },
+    { label: 'Показатель E', value: 64 },
+    { label: 'Показатель F', value: 53 },
+  ];
+  const RIGHT_BARS = [
+    { label: 'Показатель A', value: 25 },
+    { label: 'Показатель B', value: 90 },
+    { label: 'Показатель C', value: 61 },
+    { label: 'Показатель D', value: 77 },
+    { label: 'Показатель E', value: 34 },
+    { label: 'Показатель F', value: 55 },
+  ];
+
+  // --- плавный цвет от красного к зелёному по значению 0..100 ---
   const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
   const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
   function colorFor(v){
@@ -49,43 +66,7 @@
     return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
   }
 
-  // --- вычисляем компактные «оценки» 0..100 по станциям
-  // КОТЛЫ: score = (факт КПД / норм КПД)*100 (усечение 0..100), средневзвешенное по Production
-  function computeBoilerStationScores(){
-    const acc = {};
-    boilersData.forEach(item=>{
-      const sid = item.StationID;
-      const norm = (kpdvalues[sid] && kpdvalues[sid][item.BoilerID]) ? kpdvalues[sid][item.BoilerID] : 91;
-      const score = Math.max(0, Math.min(100, (item.KPD / norm) * 100));
-      const w = +item.Production || 1;
-      if(!acc[sid]) acc[sid] = {sum:0, wsum:0};
-      acc[sid].sum += score * w; acc[sid].wsum += w;
-    });
-    return Object.keys(acc).map(sid=>({
-      label: stations[sid],
-      value: acc[sid].wsum ? acc[sid].sum / acc[sid].wsum : 0
-    })).sort((a,b)=>b.value-a.value);
-  }
-
-  // ТУРБИНЫ: score = (норма URT / факт URT)*100 (чем ниже URT, тем выше score), средневзвешенное по Consumption
-  function computeTurbineStationScores(){
-    const acc = {};
-    turbinsData.forEach(item=>{
-      const sid = item.stationID;
-      const tid = parseInt(item.turbinID);
-      const norm = (urtvalues[sid] && urtvalues[sid][tid]) ? urtvalues[sid][tid] : 2300;
-      const score = Math.max(0, Math.min(100, (norm / item.URT) * 100));
-      const w = +item.Consumption || 1;
-      if(!acc[sid]) acc[sid] = {sum:0, wsum:0};
-      acc[sid].sum += score * w; acc[sid].wsum += w;
-    });
-    return Object.keys(acc).map(sid=>({
-      label: stations[sid],
-      value: acc[sid].wsum ? acc[sid].sum / acc[sid].wsum : 0
-    })).sort((a,b)=>b.value-a.value);
-  }
-
-  // --- отрисовка минималистичной горизонтальной гистограммы
+  // --- минималистичная горизонтальная гистограмма ---
   // rows: [{label, value(0..100)}]
   function drawMiniBars(svgId, rows, opts={}){
     const svg = d3.select('#'+svgId);
@@ -97,7 +78,7 @@
     const padR = opts.rightPad ?? 40;  // место под числа справа
     const padT = 8, padB = 12;
 
-    const W = 320; // базовая ширина viewBox (SVG будет растягиваться по ширине карточки)
+    const W = 320; // ширина viewBox под карточку
     const innerW = W - padL - padR;
     const H = padT + rows.length*(barH+gap) - gap + padB;
 
@@ -105,17 +86,17 @@
 
     const x = d3.scaleLinear().domain([0,100]).range([0, innerW]);
 
-    // фоновые треки
     const g = svg.append('g').attr('transform', `translate(${padL},${padT})`);
+
     rows.forEach((d, i)=>{
       const y = i*(barH+gap);
-      // трек
+      // фон
       g.append('rect')
         .attr('class','bar-track')
         .attr('x',0).attr('y',y)
         .attr('width', innerW).attr('height', barH)
         .attr('rx', barH/2).attr('ry', barH/2);
-      // заполнение
+      // заливка
       g.append('rect')
         .attr('class','bar-fill')
         .attr('x',0).attr('y',y)
@@ -132,23 +113,20 @@
       .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
       .text(d=>d.label);
 
-    // значения (внутри или сразу после заполнения — что ближе)
+    // значения %
     const vals = svg.append('g').attr('transform', `translate(${padL},${padT})`);
     vals.selectAll('text').data(rows).enter().append('text')
       .attr('class','bar-value')
       .attr('x', d=>{
         const w = x(d.value);
-        return w > 40 ? w - 8 : w + 8; // если полоса длинная — текст внутри справа, иначе снаружи
+        return w > 40 ? w - 8 : w + 8; // если полоса длинная — текст внутри, иначе снаружи
       })
       .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
       .attr('text-anchor', d=> x(d.value) > 40 ? 'end' : 'start')
-      .text(d=> `${d.value.toFixed(0)}%`);
+      .text(d=> `${Math.round(d.value)}%`);
   }
 
-  // --- данные и отрисовка
-  const boilerBars  = computeBoilerStationScores();   // [{label, value}]
-  const turbineBars = computeTurbineStationScores();  // [{label, value}]
-
-  drawMiniBars('bars-boilers',  boilerBars);
-  drawMiniBars('bars-turbines', turbineBars);
+  // --- отрисовка двух независимых гистограмм ---
+  drawMiniBars('bars-left',  LEFT_BARS);
+  drawMiniBars('bars-right', RIGHT_BARS);
 </script>
