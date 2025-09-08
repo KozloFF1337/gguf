@@ -1,30 +1,60 @@
 <script>
-  // rows: [{label, a(0..100), b(0..100)}]
+  // ===== НАСТРОЙКИ МАСШТАБА =====
+  const UNIT = 'ТУТ';                 // единица измерения
+  const SCALE_MODE = 'auto';          // 'auto' или 'fixed'
+  const FIXED_MAX = 3000;             // если SCALE_MODE === 'fixed'
+
+  // ===== КОНСТАНТНЫЕ ДАННЫЕ в ТУТ (пример) =====
+  // Две серии (a и b) на каждый показатель.
+  const LEFT_BARS2 = [
+    { label: 'Показатель A', a: 1250, b: 980 },
+    { label: 'Показатель B', a: 840,  b: 920 },
+    { label: 'Показатель C', a: 1630, b: 1510 },
+    { label: 'Показатель D', a: 690,  b: 730 },
+    { label: 'Показатель E', a: 1420, b: 1330 },
+  ];
+  const RIGHT_BARS2 = [
+    { label: 'Показатель A', a: 910,  b: 820 },
+    { label: 'Показатель B', a: 1970, b: 1820 },
+    { label: 'Показатель C', a: 1360, b: 1480 },
+    { label: 'Показатель D', a: 1210, b: 990  },
+    { label: 'Показатель E', a: 780,  b: 860  },
+  ];
+
+  // ===== ВСПОМОГАТЕЛЬНОЕ: общий максимум для обоих графиков =====
+  function computeSharedMax(datasets){
+    if (SCALE_MODE === 'fixed') return FIXED_MAX;
+    let m = 0;
+    datasets.forEach(rows => rows.forEach(d => {
+      m = Math.max(m, +d.a || 0, +d.b || 0);
+    }));
+    return m * 1.05; // небольшой запас
+  }
+
+  // ===== ФОРМАТИРОВАНИЕ ЧИСЕЛ =====
+  const fmtInt = d3.format(",");          // 1,234
+  const fmt = v => fmtInt(Math.round(v)).replace(/,/g, ' '); // 1 234
+
+  // ===== РЕНДЕР ДВОЙНЫХ БАРОВ с общим масштабом =====
+  // rows: [{label, a, b}], opts.sharedMax, opts.unit
   function drawDualBars(svgId, rows, opts = {}) {
     const svg = d3.select('#' + svgId);
     svg.selectAll('*').remove();
 
-    // Базовая геометрия
-    const barH = opts.barHeight ?? 22;     // общая «дорожка»
+    const barH = opts.barHeight ?? 22;
     const gap  = opts.gap ?? 10;
-    const minPadL = opts.leftPad ?? 100;   // минимальные отступы
+    const minPadL = opts.leftPad ?? 100;
     const minPadR = opts.rightPad ?? 56;
     const padT = 8, padB = 12;
-
-    // Ширина viewBox; сам SVG тянется по width:100%
     const W = 320;
 
-    // --- 1) Замеряем реальные ширины подписей/значений, чтобы подобрать паддинги
+    // 1) измеряем подписи и значения (с единицей измерения)
     const measureG = svg.append('g').attr('opacity', 0);
-    const mLabel = measureG.append('text').attr('class', 'bar-label').attr('x', 0).attr('y', 0);
-    const mValue = measureG.append('text').attr('class', 'bar-value').attr('x', 0).attr('y', 0);
+    const mLabel = measureG.append('text').attr('class', 'bar-label');
+    const mValue = measureG.append('text').attr('class', 'bar-value');
 
     const labels = rows.map(d => d.label);
-    const valStr = rows.map(d => {
-      const a = Math.round(Math.max(0, Math.min(100, d.a)));
-      const b = Math.round(Math.max(0, Math.min(100, d.b)));
-      return `${a}% / ${b}%`;
-    });
+    const valStr = rows.map(d => `${fmt(d.a)} ${opts.unit||UNIT} / ${fmt(d.b)} ${opts.unit||UNIT}`);
 
     const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
     const wValue = s => { mValue.text(s); return mValue.node().getComputedTextLength(); };
@@ -34,12 +64,10 @@
 
     let padL = Math.max(minPadL, Math.ceil(maxLabelW) + 14);
     let padR = Math.max(minPadR, Math.ceil(maxValueW) + 8);
-
-    // Страхуемся: оставим минимум ширины под сами бары
     const minInnerW = 80;
     padL = Math.min(padL, W - padR - minInnerW);
 
-    // Если после ограничения подписи не влазят — аккуратно укорачиваем с «…»
+    // укоротим слишком длинные подписи многоточием
     const availLabelW = padL - 12;
     function fitLabelToWidth(s) {
       if (wLabel(s) <= availLabelW) return s;
@@ -51,67 +79,67 @@
       return cut + '…';
     }
     const fittedLabels = labels.map(fitLabelToWidth);
-
-    // Больше не нужны — можно удалить
     measureG.remove();
 
-    // Итоговые размеры
     const innerW = Math.max(minInnerW, W - padL - padR);
     const H = padT + rows.length * (barH + gap) - gap + padB;
-
     svg.attr('viewBox', `0 0 ${W} ${H}`);
 
-    const x = d3.scaleLinear().domain([0, 100]).range([0, innerW]);
+    // общий масштаб по X для ОБОИХ графиков
+    const xMax = opts.sharedMax ?? computeSharedMax([rows]);
+    const x = d3.scaleLinear().domain([0, xMax]).range([0, innerW]);
 
     const g = svg.append('g').attr('transform', `translate(${padL},${padT})`);
 
     rows.forEach((d, i) => {
       const y = i * (barH + gap);
 
-      // Фон дорожки
+      // фон
       g.append('rect')
         .attr('class', 'bar-track')
         .attr('x', 0).attr('y', y)
         .attr('width', innerW).attr('height', barH)
-        .attr('rx', barH / 2).attr('ry', barH / 2);
+        .attr('rx', barH/2).attr('ry', barH/2);
 
-      // Верхняя полоса (Серия 1)
-      const half = (barH / 2) - 2;
-      const aVal = Math.max(0, Math.min(100, +d.a || 0));
+      const half = (barH/2) - 2;
+
+      // Серия 1 (верх)
       g.append('rect')
         .attr('class', 'barA-fill')
         .attr('x', 0).attr('y', y + 1)
-        .attr('width', x(aVal)).attr('height', half)
+        .attr('width', x(Math.max(0, +d.a || 0)))
+        .attr('height', half)
         .attr('rx', half).attr('ry', half);
 
-      // Нижняя полоса (Серия 2)
-      const bVal = Math.max(0, Math.min(100, +d.b || 0));
+      // Серия 2 (низ)
       g.append('rect')
         .attr('class', 'barB-fill')
         .attr('x', 0).attr('y', y + barH - 1 - half)
-        .attr('width', x(bVal)).attr('height', half)
+        .attr('width', x(Math.max(0, +d.b || 0)))
+        .attr('height', half)
         .attr('rx', half).attr('ry', half);
     });
 
-    // Подписи слева
+    // подписи слева
     const labelsG = svg.append('g').attr('transform', `translate(${padL - 8},${padT})`);
     labelsG.selectAll('text').data(fittedLabels).enter().append('text')
       .attr('class', 'bar-label')
       .attr('x', 0)
-      .attr('y', (_, i) => i * (barH + gap) + barH / 2 + .5)
+      .attr('y', (_, i) => i * (barH + gap) + barH/2 + .5)
       .text(d => d);
 
-    // Значения справа
+    // значения справа (с UNIT)
     const valsG = svg.append('g').attr('transform', `translate(${padL + innerW + 6},${padT})`);
     valsG.selectAll('text').data(valStr).enter().append('text')
       .attr('class', 'bar-value')
       .attr('x', 0)
-      .attr('y', (_, i) => i * (barH + gap) + barH / 2 + .5)
+      .attr('y', (_, i) => i * (barH + gap) + barH/2 + .5)
       .attr('text-anchor', 'start')
       .text(d => d);
   }
 
-  // Пример вызовов (оставь как у тебя):
-  // drawDualBars('bars-left',  LEFT_BARS2);
-  // drawDualBars('bars-right', RIGHT_BARS2);
+  // ===== РЕНДЕР С ОБЩИМ МАСШТАБОМ ДЛЯ ОБОИХ ГРАФИКОВ =====
+  const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]); // общий максимум
+  drawDualBars('bars-left',  LEFT_BARS2,  { sharedMax: SHARED_MAX, unit: UNIT });
+  drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX, unit: UNIT });
 </script>
