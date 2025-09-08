@@ -1,8 +1,27 @@
 <style>
+  /* Ряд с гистограммами под спидометрами */
+  .bars-container{
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    margin-top: 10px;
+  }
+  /* Отдельные карточки для гистограмм */
+  .bar-card{
+    background:#222;
+    border-radius:12px;
+    padding:12px 16px 14px;
+    box-shadow:0 2px 10px rgba(0,0,0,.35);
+    width:320px;
+  }
   .mini-title{
-    margin: 8px 0 4px;
-    font-size: 14px;
-    color: #bdbdbd;
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: #ddd;
     text-align: center;
     letter-spacing: .2px;
   }
@@ -11,8 +30,9 @@
     height: auto;
     display: block;
   }
-  .bar-track{ fill:#333; }                /* фон дорожки */
-  .bar-fill{  rx: 9; ry: 9; }             /* скругление заливки */
+  /* минималистичная палитра/типографика для баров */
+  .bar-track{ fill:#333; }
+  .bar-fill{ rx: 9; ry: 9; } /* скругление заливки */
   .bar-label{
     fill:#bdbdbd; font: 12px/1 sans-serif;
     text-anchor:end; dominant-baseline:middle;
@@ -22,25 +42,19 @@
     dominant-baseline:middle;
   }
 </style>
-<!-- Левая карточка -->
-<div class="gauge-card">
-  <h3 class="gauge-title">Котлы</h3>
-  <svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
-
-  <div class="mini-title">Гистограмма</div>
-  <svg id="bars-left" class="mini-svg"></svg>
-</div>
-
-<!-- Правая карточка -->
-<div class="gauge-card">
-  <h3 class="gauge-title">Турбины</h3>
-  <svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
-
-  <div class="mini-title">Гистограмма</div>
-  <svg id="bars-right" class="mini-svg"></svg>
+<!-- Ряд с двумя отдельными карточками-гистограммами -->
+<div class="bars-container">
+  <div class="bar-card">
+    <div class="mini-title">Гистограмма — Котлы</div>
+    <svg id="bars-left" class="mini-svg"></svg>
+  </div>
+  <div class="bar-card">
+    <div class="mini-title">Гистограмма — Турбины</div>
+    <svg id="bars-right" class="mini-svg"></svg>
+  </div>
 </div>
 <script>
-  // --- КОНСТАНТНЫЕ ДАННЫЕ (правь как нужно) ---
+  // ----- КОНСТАНТНЫЕ ДАННЫЕ (правь как нужно) -----
   const LEFT_BARS = [
     { label: 'Показатель A', value: 72 },
     { label: 'Показатель B', value: 45 },
@@ -58,7 +72,7 @@
     { label: 'Показатель F', value: 55 },
   ];
 
-  // --- плавный цвет от красного к зелёному по значению 0..100 ---
+  // ----- плавный цвет от красного к зелёному по значению 0..100 -----
   const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
   const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
   function colorFor(v){
@@ -66,7 +80,7 @@
     return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
   }
 
-  // --- минималистичная горизонтальная гистограмма ---
+  // ----- минималистичная горизонтальная гистограмма -----
   // rows: [{label, value(0..100)}]
   function drawMiniBars(svgId, rows, opts={}){
     const svg = d3.select('#'+svgId);
@@ -126,7 +140,7 @@
       .text(d=> `${Math.round(d.value)}%`);
   }
 
-  // --- отрисовка двух независимых гистограмм ---
+  // ----- рисуем две независимые гистограммы (на отдельных карточках) -----
   drawMiniBars('bars-left',  LEFT_BARS);
   drawMiniBars('bars-right', RIGHT_BARS);
 </script>
