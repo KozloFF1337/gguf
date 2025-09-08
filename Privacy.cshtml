@@ -119,4 +119,11 @@ function drawDualBars(svgId, rows, opts = {}) {
     .attr('text-anchor', 'end')
     .text(d=> d.label);
 }
+
+const UNIT = 'ТУТ';
+const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]);
+drawDualBars('bars-left',  LEFT_BARS2,  { sharedMax: SHARED_MAX, unit: UNIT });
+drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX, unit: UNIT });
+
 </script>
+
