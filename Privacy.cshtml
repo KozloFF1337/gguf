@@ -1,129 +1,118 @@
-<script>
-// формат числа "1 234"
-const _fmtInt = d3.format(",");
-const fmtTU = v => _fmtInt(Math.round(+v||0)).replace(/,/g," ");
-
-// общий максимум (если нужно)
-function computeSharedMax(datasets){
-  let m = 0;
-  datasets.forEach(rows => rows.forEach(d => { m = Math.max(m, +d.a||0, +d.b||0); }));
-  return m * 1.05; // небольшой запас
+/* Средняя карточка между спидометрами */
+.summary-card{
+  background:#222;
+  border-radius:12px;
+  padding:14px 16px;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);
+  width: clamp(260px, 28vw, 520px);
+  flex: 1 1 clamp(260px, 28vw, 520px);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
 }
 
-// ДВОЙНЫЕ БАРЫ: линия слева, подпись перед линией, бары вправо (левый край прямой, правый скруглён)
-// rows: [{label, a, b}], opts: {sharedMax, unit, barHeight, gap}
-function drawDualBars(svgId, rows, opts = {}) {
-  const UNIT = opts.unit || 'ТУТ';
-
-  const svg = d3.select('#'+svgId);
-  svg.selectAll('*').remove();
-
-  const barH = opts.barHeight ?? 22;   // высота дорожки
-  const gap  = opts.gap ?? 10;
-  const minPadLbl = 90;                // минимум слева под подпись показателя
-  const minPadVal = 70;                // минимум справа под вывод значений
-  const padT = 8, padB = 12;
-  const W = 320;                       // viewBox — SVG резиновый
-
-  // 1) замеряем реальные ширины подписей и значений
-  const meas = svg.append('g').attr('opacity', 0);
-  const mLabel = meas.append('text').attr('class','bar-label');
-  const mValue = meas.append('text').attr('class','bar-value');
-
-  const labelTexts = rows.map(d => d.label);
-  const valueTexts = rows.flatMap(d => [ `${fmtTU(d.a)} ${UNIT}`, `${fmtTU(d.b)} ${UNIT}` ]);
-
-  const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
-  const wValue = s => { mValue.text(s); return mValue.node().getComputedTextLength(); };
-
-  let maxLabelW = 0; labelTexts.forEach(s => maxLabelW = Math.max(maxLabelW, wLabel(s)));
-  let maxValueW = 0; valueTexts.forEach(s => maxValueW = Math.max(maxValueW, wValue(s)));
-  meas.remove();
-
-  // поля: слева под подпись, справа под числа
-  let padLbl = Math.max(minPadLbl, Math.ceil(maxLabelW) + 12);
-  let padVal = Math.max(minPadVal, Math.ceil(maxValueW) + 10);
-
-  // гарантированный минимум ширины под бары
-  const minBarW = 100;
-  padLbl = Math.min(padLbl, W - padVal - minBarW);
-
-  const innerW = Math.max(minBarW, W - padLbl - padVal);
-  const H = padT + rows.length*(barH+gap) - gap + padB;
-  svg.attr('viewBox', `0 0 ${W} ${H}`);
-
-  // ось в x = padLbl
-  const axisX = padLbl;
-
-  // общий масштаб по X
-  const xMax = opts.sharedMax ?? computeSharedMax([rows]);
-  const x = d3.scaleLinear().domain([0, xMax]).range([0, innerW]);
-
-  // линия-ось
-  svg.append('line')
-    .attr('class','origin-line')
-    .attr('x1', axisX).attr('y1', padT - 2)
-    .attr('x2', axisX).attr('y2', padT + rows.length*(barH+gap) - gap + 2);
-
-  const g = svg.append('g').attr('transform', `translate(${axisX},${padT})`);
-
-  // path: прямой левый край (у оси), правый скруглён
-  function pillRight(yTop, height, width){
-    const w = Math.max(0, +width||0);
-    if (w <= 0) return '';
-    const r = Math.min(height/2, w);
-    const xL = 0, xR = w, xRm = w - r;
-    const yT = yTop, yB = yTop + height;
-    // M 0,yT H w-r Q w,yT w,yT+r V w,yB-r Q w,yB w-r,yB H 0 Z
-    return `M ${xL},${yT} H ${xRm} Q ${xR},${yT} ${xR},${yT+r} V ${xR},${yB-r} Q ${xR},${yB} ${xRm},${yB} H ${xL} Z`;
-  }
-
-  rows.forEach((d,i)=>{
-    const y = i*(barH+gap);
-    const half = (barH/2) - 2;
-
-    // фон-дорожка (на всю ширину вправо)
-    const trackPath = pillRight(y, barH, innerW);
-    g.append('path').attr('d', trackPath).attr('class','bar-track');
-
-    // серия 1 (верх)
-    const aW = x(Math.max(0, +d.a||0));
-    g.append('path').attr('d', pillRight(y + 1, half, aW)).attr('class','barA-fill');
-
-    // серия 2 (низ)
-    const bW = x(Math.max(0, +d.b||0));
-    g.append('path').attr('d', pillRight(y + barH - 1 - half, half, bW)).attr('class','barB-fill');
-
-    // значения — сразу ПОСЛЕ соответствующей полосы (справа от неё)
-    g.append('text')
-      .attr('class','bar-value')
-      .attr('x', aW + 8)
-      .attr('y', y + 1 + half/2 + .5)
-      .attr('text-anchor','start')
-      .text(`${fmtTU(d.a)} ${UNIT}`);
-
-    g.append('text')
-      .attr('class','bar-value')
-      .attr('x', bW + 8)
-      .attr('y', y + barH - 1 - half + half/2 + .5)
-      .attr('text-anchor','start')
-      .text(`${fmtTU(d.b)} ${UNIT}`);
-  });
-
-  // подписи показателей — ПЕРЕД линией, справа выравниваем к оси
-  const labelsG = svg.append('g').attr('transform', `translate(${axisX - 8},${padT})`);
-  labelsG.selectAll('text').data(rows).enter().append('text')
-    .attr('class','bar-label')
-    .attr('x', 0)
-    .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-    .attr('text-anchor', 'end')
-    .text(d=> d.label);
+/* Заголовок */
+.summary-title{
+  margin:0 0 10px; font-size:16px; color:#ddd; letter-spacing:.2px; text-align:center;
 }
 
-const UNIT = 'ТУТ';
-const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]);
-drawDualBars('bars-left',  LEFT_BARS2,  { sharedMax: SHARED_MAX, unit: UNIT });
-drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX, unit: UNIT });
+/* Кольцо-процент (тонкая «пончик»-полоса) */
+.summary-ring{
+  --p: 78;             /* процент (JS перезапишет) */
+  --th: 12px;          /* толщина кольца */
+  --clr: #00d26a;      /* цвет дуги (JS перезапишет) */
+  width:140px; height:140px; border-radius:50%;
+  background: conic-gradient(var(--clr) calc(var(--p)*1%), #333 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
+          mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
+  position:relative;
+  margin-bottom:12px;
+}
+.summary-ring .value{
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font:700 28px/1 sans-serif;
+}
 
-</script>
+/* Два KPI-бейджа под кольцом */
+.kpis{
+  display:grid; grid-template-columns: 1fr 1fr; gap:10px; width:100%; max-width:460px;
+}
+.kpi{
+  background:#2a2a2a; border-radius:10px; padding:10px 12px;
+  display:flex; flex-direction:column; gap:4px;
+}
+.kpi-label{ color:#bdbdbd; font:11px/1 sans-serif; text-transform:uppercase; letter-spacing:.3px; }
+.kpi-value{ color:#eaeaea; font:700 18px/1 sans-serif; }
 
+/* Адаптив: в один столбец на узких экранах */
+@media (max-width: 900px){
+  .summary-card{ width:100%; flex-basis:100%; }
+  .kpis{ grid-template-columns: 1fr; }
+}
+<div class="summary-card">
+  <div class="summary-title">Итоги</div>
+
+  <!-- Кольцо с процентом -->
+  <div class="summary-ring" id="summary-ring">
+    <div class="value" id="summary-percent">0%</div>
+  </div>
+
+  <!-- Два KPI -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-label">Резервы, ₽</div>
+      <div class="kpi-value" id="kpi-rub">—</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Резервы, ТУТ</div>
+      <div class="kpi-value" id="kpi-tut">—</div>
+    </div>
+  </div>
+</div>
+// ---- Константы спидометров (чтобы использовать в расчёте «общей эффективности») ----
+const GAUGE_LEFT  = 70;   // Котлы
+const GAUGE_RIGHT = 85;   // Турбины
+
+// Если выше ты вызываешь drawGauge(...) уже с числами — можно оставить так:
+drawGauge('gauge-1', GAUGE_LEFT);
+drawGauge('gauge-2', GAUGE_RIGHT);
+
+// ---- Константные резервы (поменяй под свои данные) ----
+const RESERVES_RUB = 12400000;   // в рублях
+const RESERVES_TUT = 1280;       // в ТУТ
+
+// ---- Форматирование чисел по-русски ----
+const fmtInt = d3.format(",");
+const fmtRu = n => fmtInt(Math.round(n)).replace(/,/g, " ");
+function fmtMoneyRu(n){
+  const abs = Math.abs(n);
+  if (abs >= 1e9)  return `${(n/1e9).toFixed(1).replace('.', ',')} млрд`;
+  if (abs >= 1e6)  return `${(n/1e6).toFixed(1).replace('.', ',')} млн`;
+  if (abs >= 1e3)  return `${(n/1e3).toFixed(1).replace('.', ',')} тыс`;
+  return fmtRu(n);
+}
+
+// ---- Цвет по проценту (красный → жёлтый → зелёный) ----
+const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
+const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
+function colorForPercent(p){
+  const t = Math.max(0, Math.min(1, p/100));
+  return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
+}
+
+// ---- Обновляем карточку «Итоги» ----
+(function updateSummary(){
+  const overall = (GAUGE_LEFT + GAUGE_RIGHT) / 2;           // простое среднее
+  const ring = document.getElementById('summary-ring');
+  const percentEl = document.getElementById('summary-percent');
+  const rubEl = document.getElementById('kpi-rub');
+  const tutEl = document.getElementById('kpi-tut');
+
+  // Процент и кольцо
+  ring.style.setProperty('--p', overall.toFixed(1));
+  ring.style.setProperty('--clr', colorForPercent(overall));
+  percentEl.textContent = `${Math.round(overall)}%`;
+
+  // Резервы
+  rubEl.textContent = `₽ ${fmtMoneyRu(RESERVES_RUB)}`;
+  tutEl.textContent = fmtRu(RESERVES_TUT);
+})();
