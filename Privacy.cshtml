@@ -1,532 +1,133 @@
-@using Newtonsoft.Json; 
-
-@{
-    ViewData["Title"] = "Альтаир Рейтинг";
+.gauges-container{
+  flex: 1 1 auto;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: stretch;   /* карточки растягиваются */
+  padding: 0;                 /* без внутренних отступов */
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  min-width: 0;
+}
+.gauge-card,
+.summary-card{
+  flex: 1 1 0;                /* равные доли ширины */
+  min-width: 0;               /* разрешаем сжиматься */
+  max-width: none;            /* убираем верхний предел */
+  background:#222;
+  border-radius:12px;
+  padding:0;                  /* убираем внутренние отступы */
+  box-shadow:0 2px 10px rgba(0,0,0,.35);
+  display:flex; flex-direction:column; align-items:center;
+}
+.gauge-title{
+  margin:6px 0;
+  font-size:24px;
+  color:#ddd;
+  text-align:center;
+  letter-spacing:.3px;
 }
 
-@model DataViewModel
+/* Итоги: число справа от кольца */
+.summary-ring .value{ display:none; } /* на случай, если останется старый div */
+.summary-inline{ display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:10px; }
+.summary-big{ color:#fff; font:700 28px/1 sans-serif; }
 
-<head>
-    <meta charset="UTF-8">
-    <title>Treemap Visualization</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <style>
-        .rating-container {
-            margin-left: 5px;
-            margin-bottom: 5px;
-            /* ширину и float убираем, чтобы не мешали флексу */
-            float: none;
-            flex: 0 0 260px;
-            padding: 10px;
-            padding-top: 0;
-            background-color: #222;
-            color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-            font-family: sans-serif;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-        body {
-            display: flex;
-            justify-content: space-between;
-            background-color: black;
-            color: white;
-            font-family: sans-serif;
-        }
-        .rating-card {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #333;
-            border-radius: 5px;
-            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
-            transition: transform 0.3s ease;
-            cursor: pointer;
-        }
-        .rating-info {
-            display: flex;
-            align-items: center;
-            flex-grow: 1;
-        }
-        .radio-btn { margin-left: 10px; cursor: pointer; transform: scale(1); transform-origin: center; }
-        .radio-btn input { cursor: pointer; }
-        .rating-card:nth-child(even) { background-color: #2a2a2a; }
-        .rank-number { font-weight: bold; color: #fff; font-size: 16px; margin-right: 10px; }
-        .user-name { font-style: normal; font-size: 16px; color: #dddddd; }
-        .score-value-0 { margin-left: 4px; font-size: 16px; font-weight: bold; color: #5d5d5d; }
-        .score-value-1 { margin-left: 4px; font-size: 16px; font-weight: bold; color: #8B0000; }
-        .score-value-2 { margin-left: 4px; font-size: 16px; font-weight: bold; color: #c5172c; }
-        .score-value-3 { margin-left: 4px; font-size: 16px; font-weight: bold; color: #FF0000; }
-        .score-value-4 { margin-left: 4px; font-size: 16px; font-weight: bold; color: #009F00; }
-        .score-value-5 { margin-left: 4px; font-size: 16px; font-weight: bold; color: #006400; }    
-        .tooltip {
-            position: absolute; background-color: rgba(0, 0, 0, 0.8);
-            color: white; padding: 8px; z-index: 1000; opacity: 0;
-            transition: opacity 0.01s ease-in-out; pointer-events: none;
-        }
-        #sidebar { grid-column-start: span 1; align-self: start; width: calc(10% + 20px); margin-left: 10px; }
-        .rating-card:hover { transform: scale(1.02); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); background-color: #3a3a3a !important; }
 
-        .main-container { display: flex; }
-        .graph-container { width: 100%; text-align: center; box-sizing: border-box; margin-left: 4px; }
+<!-- БЫЛО -->
+<div style="width: 88%;">
+<!-- СТАЛО -->
+<div style="width: 100%;">
 
-        h2 { color: #dddddd; font-size: 30px; margin-top: 0; margin-bottom: 4px; display: inline-block; }
-        .node rect { stroke-width: 1px; fill-opacity: 1; }
-        text.centered-text { font-size: 16px; dominant-baseline: middle; pointer-events: none; text-anchor: middle; }
 
-        select {
-            width: 90px; height: 40px; border: none; border-radius: 5px;
-            background-color: #333; color: #dddddd; font-size: 16px; text-align: center;
-            padding: 0; cursor: pointer; transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
-        }
-        select:hover { background-color: #444; color: #fd817e; }
-        select:focus { outline: none; box-shadow: 0 0 5px rgba(253, 129, 126, 0.5); }
+<!-- БЫЛО -->
+<div class="summary-ring" id="summary-ring">
+  <div class="value" id="summary-percent">0%</div>
+</div>
 
-        /* Ряд со спидометрами — без внутренних отступов */
-        .gauges-container{
-            flex: 1 1 auto;
-            display: flex;
-            gap: 16px;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 0;              /* было 8px 10px — убрали отступы */
-            box-sizing: border-box;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            min-width: 0;
-        }
+<!-- СТАЛО -->
+<div class="summary-inline">
+  <div class="summary-ring" id="summary-ring"></div>
+  <div class="summary-big" id="summary-percent-out">0%</div>
+</div>
 
-        .gauge-title{
-            margin: 6px 0;
-            font-size: 24px;
-            color: #ddd;
-            text-align: center;
-            letter-spacing: .3px;
-        }
 
-        /* Карточки спидометров/итогов без внутренних отступов */
-        .gauge-card, .summary-card{
-            flex: 1 1 280px;
-            min-width: 260px;
-            max-width: 520px;
-            background:#222;
-            border-radius:12px;
-            padding:0;               /* важно: убрали внутренний паддинг */
-            box-shadow:0 2px 10px rgba(0,0,0,.35);
-            display:flex; flex-direction:column; align-items:center;
-        }
+<!-- БЫЛО -->
+<svg id="gauge-1" class="gauge-svg" viewBox="0 20 320 160" preserveAspectRatio="xMidYMid meet"></svg>
+<svg id="gauge-2" class="gauge-svg" viewBox="0 20 320 160" preserveAspectRatio="xMidYMid meet"></svg>
 
-        /* Карточка «Итоги» */
-        .summary-title{ margin:8px 0 6px; font-size:16px; color:#ddd; letter-spacing:.2px; text-align:center; }
-        .summary-ring{
-            --p: 78; --th: 12px; --clr: #00d26a;
-            width:140px; height:140px; border-radius:50%;
-            background: conic-gradient(var(--clr) calc(var(--p)*1%), #333 0);
-            -webkit-mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
-                    mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
-            position:relative; margin-bottom:8px;
-        }
-        .summary-ring .value{ display:none; } /* чисел внутри кольца нет */
-        .summary-inline{ display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:10px; }
-        .summary-big{ color:#fff; font:700 28px/1 sans-serif; }
+<!-- СТАЛО -->
+<svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
+<svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
 
-        /* KPI */
-        .kpis{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; width:100%; max-width:460px; padding: 0 12px 12px; box-sizing: border-box; }
-        .kpi{ background:#2a2a2a; border-radius:10px; padding:10px 12px; display:flex; flex-direction:column; gap:4px; }
-        .kpi-label{ color:#bdbdbd; font:11px/1 sans-serif; text-transform:uppercase; letter-spacing:.3px; }
-        .kpi-value{ color:#eaeaea; font:700 18px/1 sans-serif; }
 
-        /* Низ: гистограммы */
-        .bars-container{
-            flex: 1 1 auto;
-            display: flex;
-            gap: 8px;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 0;             /* без отступов */
-            box-sizing: border-box;
-            margin-top: 6px;
-            flex-wrap: wrap;
-        }
-        .bar-card{
-            width: clamp(280px, 48vw, 640px);
-            flex: 1 1 clamp(280px, 48vw, 640px);
-            background:#222;
-            border-radius:12px;
-            padding:4px;
-            box-shadow:0 2px 10px rgba(0,0,0,.35);
-        }
-        .mini-title{ margin: 0 0 8px; font-size: 20px; color: #ddd; text-align: center; letter-spacing: .2px; }
 
-        .gauge-svg, .mini-svg{ width: 100%; height: auto; display: block; overflow: visible; }
+function drawGauge(svgId, value){
+  const svg = d3.select('#'+svgId);
+  svg.selectAll('*').remove();
 
-        .mini-legend{ display:flex; gap:14px; justify-content:center; align-items:center; color:#bdbdbd; font:16px/1 sans-serif; margin: 2px 0 8px; }
-        .sw{ width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:6px; }
-        .sw-a{ background:#00d26a; }
-        .sw-b{ background:#ffd400; }
+  const W = 320, H = 180;
+  const cx = W/2;
+  const rOuter = (W/2) - 1;    // дуга почти до краёв по горизонтали
+  const thickness = 28;
+  const rInner = rOuter - thickness;
+  const cy = rOuter + 10;      // лёгкий верхний зазор
 
-        .barA-fill{ fill:#00d26a; }
-        .barB-fill{ fill:#ffd400; }
-        .bar-label{ fill:#bdbdbd; font:10px/1 sans-serif; text-anchor:end; dominant-baseline:middle; }
-        .bar-value{ fill:#e6e6e6; font:10px/1 sans-serif; dominant-baseline:middle; }
-        .origin-line{ stroke:#666; stroke-width:1.5; shape-rendering:crispEdges; }
-    </style>
-</head>
-<body>
-    <div style="margin-top: 5px;">
-        <div style="display:flex; width: 100%; gap:16px; align-items:flex-start;">
-            <div style="flex:1 1 auto;">
-                <div class="gauges-container">
-                    <div class="gauge-card">
-                        <h3 class="gauge-title">Котлы</h3>
-                        <svg id="gauge-1" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
-                    </div>
+  // Градиент (красный -> жёлтый -> зелёный)
+  const defs = svg.append('defs');
+  const gradId = `grad-${svgId}`;
+  const grad = defs.append('linearGradient')
+    .attr('id', gradId)
+    .attr('gradientUnits', 'userSpaceOnUse')
+    .attr('x1', 0).attr('y1', cy)
+    .attr('x2', W).attr('y2', cy);
+  grad.append('stop').attr('offset','0%').attr('stop-color','#ff2d2d');
+  grad.append('stop').attr('offset','50%').attr('stop-color','#ffd400');
+  grad.append('stop').attr('offset','100%').attr('stop-color','#00d26a');
 
-                    <div class="summary-card">
-                        <div class="summary-title">Итоги</div>
-                        <div class="summary-inline">
-                            <div class="summary-ring" id="summary-ring"></div>
-                            <div class="summary-big" id="summary-percent-out">0%</div>
-                        </div>
-                        <div class="kpis">
-                            <div class="kpi">
-                                <div class="kpi-label">Резервы, ₽</div>
-                                <div class="kpi-value" id="kpi-rub">—</div>
-                            </div>
-                            <div class="kpi">
-                                <div class="kpi-label">Резервы, ТУТ</div>
-                                <div class="kpi-value" id="kpi-tut">—</div>
-                            </div>
-                        </div>
-                    </div>
+  // Полукруг от -π до 0 (слева->вправо)
+  const start = -Math.PI, end = 0;
+  const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
 
-                    <div class="gauge-card">
-                        <h3 class="gauge-title">Турбины</h3>
-                        <svg id="gauge-2" class="gauge-svg" viewBox="0 0 320 180" preserveAspectRatio="xMidYMid meet"></svg>
-                    </div>
-                </div>
+  // Фон дуги
+  svg.append('g').attr('transform', `translate(${cx},${cy})`)
+    .append('path')
+    .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(end))
+    .attr('fill', '#3a3a3a');
 
-                <div class="bars-container">
-                    <div class="bar-card">
-                        <div class="mini-title">Пережоги Котлы</div>
-                        <div class="mini-legend"><span class="sw sw-a"></span>Серия 1 <span class="sw sw-b"></span>Серия 2</div>
-                        <svg id="bars-left" class="mini-svg"></svg>
-                    </div>
+  // Значение
+  const valAngle = scale(Math.max(0, Math.min(100, value)));
+  svg.append('g').attr('transform', `translate(${cx},${cy})`)
+    .append('path')
+    .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(valAngle))
+    .attr('fill', `url(#${gradId})`);
 
-                    <div class="bar-card">
-                        <div class="mini-title">Пережоги Турбины</div>
-                        <div class="mini-legend"><span class="sw sw-a"></span>Серия 1 <span class="sw sw-b"></span>Серия 2</div>
-                        <svg id="bars-right" class="mini-svg"></svg>
-                    </div>
-                </div>
-            </div>
+  // Число в центре можно оставить/убрать; сейчас оставлено:
+  svg.append('text')
+    .attr('x', cx).attr('y', cy - 10)
+    .attr('text-anchor','middle').attr('fill','#fff')
+    .attr('font-family','sans-serif').attr('font-size','28px').attr('font-weight','700')
+    .text(`${Math.round(value)}%`);
+}
 
-            <div class="rating-container">
-                <div>
-                    <h2 style="margin-bottom: 10px;margin-top: 5px;">Рейтинг:</h2>
-                    <select style="float: right;margin-top: 5px;" id="periodSelect" onchange="reloadPage()">
-                        <option value="week">Неделя</option>
-                        <option value="month">Месяц</option>
-                        <option value="year">Год</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div id="tooltip" class="tooltip"></div>
 
-    <script>
-        // --- Данные станций (как было)
-        const stations = { 25:`РГРЭС`, 9:`ТУГРЭС`, 15:`БГРЭС`, 1:`НГРЭС`, 24:`КГРЭС2`, 26:`ПГРЭС` };
-        const stationLinks = {
-            25:'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%AD%D0%A1',
-            9:'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A2%D0%A3%D0%93%D0%A0%D0%AD%D0%A1',
-            15:'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B5%D0%BB%D0%93%D0%A0%D0%AD%D0%A1',
-            1:'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%93%D0%A0%D0%AD%D0%A1',
-            24:'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%93%D0%A0%D0%AD%D0%A1-2',
-            26:'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9F%D0%A0%D0%93%D0%A0%D0%AD%D0%A1'
-        };
 
-        // нормировочные словари (оставлены как в исходнике)
-        const rgres_kpdvalues = {"01А":90.28,"01Б":89.9,"02А":91.41,"02Б":91.28,"03А":90.07,"03Б":89.37,"04А":92.08,"04Б":91.85,"05А":91.63,"05Б":91.7,"06А":88.28,"06Б":88.54,"07":91.37,"08":91.68,"09":90.61,"10":90.42};
-        const rgres_urtvalues = {"1":1930.4,"2":2006.3,"3":1966.9,"4":1941.6,"5":1880.3,"6":1949.3,"7":1982.2,"8":1950.7,"9":1932.2,"10":1925.7};
-        const tugres_kpdvalues = {"01":90.86,"02":90.93,"03":90.94,"04":90.18,"05":90.95,"06":90.8,"07":88.76,"08":88.36,"09":89.21,"10":89.9,"11":90.92,"12":91.16,"13А":90.66,"13Б":91.83,"14А":89.32,"14Б":90.77};
-        const tugres_urtvalues = {"1":2476,"2":2295,"3":2282,"4":2142,"5":2110,"6":2058,"7":2031,"8":2148,"9":2081};
-        const bgres_kpdvalues = {"01А":90.6,"01Б":90.15,"02А":90.26,"02Б":90.79,"03А":89.86,"03Б":90.62,"04А":89.97,"04Б":88.92,"05А":90.25,"05Б":90.32,"06А":89.45,"06Б":89.03};
-        const bgres_urtvalues = {"1":2004,"2":2060,"3":2048,"4":2039,"5":2102,"6":1953};
-        const ngres_kpdvalues = {"01А":91.73,"01Б":89.06,"02А":87.93,"02Б":88.18,"03А":90.46,"03Б":90.91,"04А":91.06,"04Б":89.07,"05А":89.48,"05Б":87.58,"06А":89.85,"06Б":88.58,"07А":87.92,"07Б":88.93};
-        const ngres_urtvalues = {"1":2360.8,"2":2176.66,"3":2261.85,"4":2225.64,"5":2295.6,"6":2280.1,"7":1934};
-        const kgres2_kpdvalues = {"01А":91.42,"01Б":91.77,"02А":91.58,"02Б":91.97,"03А":91.58,"03Б":91.97,"04А":91.7,"04Б":89.54,"05А":89.13,"05Б":91.73,"06А":91.9,"06Б":92.03,"07А":91.89,"07Б":91.56,"08А":92.55,"08Б":91.72,"09А":89.93,"09Б":89.93,"10А":90.38,"10Б":88.83};
-        const kgres2_urtvalues = {"1":2198.3,"2":2228.8,"3":2228.8,"4":2228.8,"5":1833.3,"6":2174.5,"7":2174.5,"8":2085.2,"9":2423.6,"10":2423.6};
-        const pgres_kpdvalues = {"01А":84.35,"01Б":83.62,"02А":83.62,"02Б":83.62,"03А":83.62,"03Б":83.62,"04А":83.7,"04Б":84.7,"05":87.14,"06":87.14,"07":87.14,"08":78.4,"09":83.62};
-        const pgres_urtvalues = {"1":2252.83,"2":2252.83,"3":2252.83,"4":2371,"5":2089,"6":2005.5,"7":1986.2,"8":1986.2,"9":1914.2};
+// БЫЛО:
+const percentEl = document.getElementById('summary-percent');
+// ...
+percentEl.textContent = `${Math.round(overall)}%`;
 
-        const kpdvalues = {25:rgres_kpdvalues,9:tugres_kpdvalues,15:bgres_kpdvalues,1:ngres_kpdvalues,24:kgres2_kpdvalues,26:pgres_kpdvalues};
-        const urtvalues = {25:rgres_urtvalues,9:tugres_urtvalues,15:bgres_urtvalues,1:ngres_urtvalues,24:kgres2_urtvalues,26:pgres_urtvalues};
+// СТАЛО:
+const percentOut = document.getElementById('summary-percent-out');
+// ...
+percentOut.textContent = `${Math.round(overall)}%`;
 
-        // Данные из модели
-        const turbinsData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.weekTurbins));
-        const boilersData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.weekBoilers));
 
-        const hierarchicalData_turbin = {
-            name: "Turbines",
-            children: turbinsData.map(item => ({
-                urt: item.URT, size: item.Consumption, station: item.stationID, turbin: item.turbinID,
-                urt_percent: (((item.URT - (urtvalues[item.stationID][parseInt(item.turbinID)] > 0 ? urtvalues[item.stationID][parseInt(item.turbinID)] : 2300)) / item.URT) * 100),
-                urt_percent_normal: urtvalues[item.stationID][parseInt(item.turbinID)] > 0 ? urtvalues[item.stationID][parseInt(item.turbinID)] : 2300
-            }))
-        };
 
-        const hierarchicalData_boiler = {
-            name: "Boilers",
-            children: boilersData.map(item => ({
-                kpd: item.KPD, size: item.Production, station: item.StationID, boiler: item.BoilerID,
-                kpd_percent: (((item.KPD - (kpdvalues[item.StationID][item.BoilerID] > 0 ? kpdvalues[item.StationID][item.BoilerID] : 91)) / item.KPD) * 100),
-                kpd_percent_normal: kpdvalues[item.StationID][item.BoilerID] > 0 ? kpdvalues[item.StationID][item.BoilerID] : 91
-            }))
-        };
+drawGauge('gauge-1', 70);
+drawGauge('gauge-2', 85);
 
-        const combinedData = hierarchicalData_turbin.children.concat(hierarchicalData_boiler.children);
-
-        function calculateRating(group) {
-            const sumUrtPercent = group.reduce((acc, curr) => {
-                const value = curr.urt_percent !== undefined ? curr.urt_percent : 0;
-                return acc + parseFloat(value) * curr.size * -1;
-            }, 0);
-            const sumKpdPercent = group.reduce((acc, curr) => {
-                const value = curr.kpd_percent !== undefined ? curr.kpd_percent : 0;
-                return acc + parseFloat(value) * curr.size;
-            }, 0);
-            const totalSum = group.reduce((acc, curr) => acc + curr.size, 0);
-            return totalSum !== 0 ? (sumUrtPercent + sumKpdPercent) * 2 / totalSum : 0;
-        }
-
-        const groupedData = {};
-        combinedData.forEach(item => {
-            if (!groupedData[item.station]) groupedData[item.station] = [];
-            groupedData[item.station].push(item);
-        });
-
-        const ratings = Object.keys(groupedData).map(key => ({ stationID: key, rating: calculateRating(groupedData[key]) }));
-        ratings.sort((a, b) => b.rating - a.rating);
-
-        const ratingContainer = d3.select('.rating-container');
-        function selectColorForRating(rt) {
-            if (rt < 0) return 'score-value-3';
-            if (rt >= 0) return 'score-value-4';
-            return 'score-value-0';
-        }
-
-        ratings.forEach((rating, index) => {
-            const cardDiv = ratingContainer.append('div').attr('class', 'rating-card');
-            const ratingInfo = cardDiv.append('div').attr('class', 'rating-info').on('click', function() {
-                window.open(stationLinks[rating.stationID], '_blank');
-            });
-            ratingInfo.append('span').attr('class', 'rank-number').text(index + 1 + '.');
-            ratingInfo.append('span').attr('class', 'user-name').text(stations[rating.stationID]);
-            ratingInfo.append('span').attr('class', selectColorForRating(rating.rating)).text(`${rating.rating.toFixed(2)}%`);
-        });
-
-        // если функция сброса не определена — делаем no-op, чтобы не было ошибок
-        function resetHighlight(){}
-
-        // ---------- СПИДОМЕТРЫ БЕЗ ОТСТУПОВ ----------
-        function drawGauge(svgId, value){
-            const svg = d3.select('#'+svgId);
-            svg.selectAll('*').remove();
-
-            const W = 320, H = 180;
-            const cx = W/2;
-            const rOuter = (W/2) - 1;     // почти до краёв
-            const thickness = 28;
-            const rInner = rOuter - thickness;
-            const cy = rOuter + 10;       // лёгкий верхний зазор
-
-            const defs = svg.append('defs');
-            const gradId = `grad-${svgId}`;
-            const grad = defs.append('linearGradient')
-                .attr('id', gradId)
-                .attr('gradientUnits', 'userSpaceOnUse')
-                .attr('x1', 0).attr('y1', cy)
-                .attr('x2', W).attr('y2', cy);
-            grad.append('stop').attr('offset','0%').attr('stop-color','#ff2d2d');
-            grad.append('stop').attr('offset','50%').attr('stop-color','#ffd400');
-            grad.append('stop').attr('offset','100%').attr('stop-color','#00d26a');
-
-            const start = -Math.PI;  // слева
-            const end   = 0;         // справа
-            const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
-
-            svg.append('g').attr('transform', `translate(${cx},${cy})`)
-                .append('path')
-                .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(end))
-                .attr('fill', '#3a3a3a');
-
-            const valAngle = scale(Math.max(0, Math.min(100, value)));
-            svg.append('g').attr('transform', `translate(${cx},${cy})`)
-                .append('path')
-                .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(valAngle))
-                .attr('fill', `url(#${gradId})`);
-
-            // значение в центре спидометра
-            svg.append('text')
-                .attr('x', cx).attr('y', cy - 10)
-                .attr('text-anchor','middle').attr('fill','#fff')
-                .attr('font-family','sans-serif').attr('font-size','28px').attr('font-weight','700')
-                .text(`${Math.round(value)}%`);
-        }
-
-        const GAUGE_LEFT  = 70;
-        const GAUGE_RIGHT = 85;
-        drawGauge('gauge-1', GAUGE_LEFT);
-        drawGauge('gauge-2', GAUGE_RIGHT);
-
-        // ---------- КАРТОЧКА «ИТОГИ» ----------
-        const fmtInt = d3.format(",");
-        const fmtRu = n => fmtInt(Math.round(n)).replace(/,/g, " ");
-        function fmtMoneyRu(n){
-            const abs = Math.abs(n);
-            if (abs >= 1e9)  return `${(n/1e9).toFixed(1).replace('.', ',')} млрд`;
-            if (abs >= 1e6)  return `${(n/1e6).toFixed(1).replace('.', ',')} млн`;
-            if (abs >= 1e3)  return `${(n/1e3).toFixed(1).replace('.', ',')} тыс`;
-            return fmtRu(n);
-        }
-        const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
-        const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
-        function colorForPercent(p){
-            const t = Math.max(0, Math.min(1, p/100));
-            return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
-        }
-
-        (function updateSummary(){
-            const overall = (GAUGE_LEFT + GAUGE_RIGHT) / 2;
-            const ring = document.getElementById('summary-ring');
-            const percentOut = document.getElementById('summary-percent-out');
-            const rubEl = document.getElementById('kpi-rub');
-            const tutEl = document.getElementById('kpi-tut');
-
-            ring.style.setProperty('--p', overall.toFixed(1));
-            ring.style.setProperty('--clr', colorForPercent(overall));
-            percentOut.textContent = `${Math.round(overall)}%`;
-
-            const RESERVES_RUB = 12400000;
-            const RESERVES_TUT = 1280;
-            rubEl.textContent = `₽ ${fmtMoneyRu(RESERVES_RUB)}`;
-            tutEl.textContent = fmtRu(RESERVES_TUT);
-        })();
-
-        // ---------- ДВУЙНЫЕ ГОРИЗОНТАЛЬНЫЕ БАРЫ (общая шкала) ----------
-        const LEFT_BARS2 = [
-            { label: 'Показатель A', a: 1250, b: 980 },
-            { label: 'Показатель B', a: 840,  b: 920 },
-            { label: 'Показатель C', a: 1630, b: 1510 },
-            { label: 'Показатель D', a: 690,  b: 730 },
-            { label: 'Показатель E', a: 1420, b: 1330 },
-        ];
-        const RIGHT_BARS2 = [
-            { label: 'Показатель A', a: 910,  b: 820 },
-            { label: 'Показатель B', a: 1970, b: 1820 },
-            { label: 'Показатель C', a: 1360, b: 1480 },
-            { label: 'Показатель D', a: 1210, b: 990  },
-            { label: 'Показатель E', a: 780,  b: 860  },
-            { label: 'Показатель F', a: 660,  b: 590  },
-        ];
-
-        const _fmtInt2 = d3.format(",");
-        const fmtTU = v => _fmtInt2(Math.round(+v||0)).replace(/,/g," ");
-        function computeSharedMax(datasets){
-            let m = 0;
-            datasets.forEach(rows => rows.forEach(d => { m = Math.max(m, +d.a||0, +d.b||0); }));
-            return m * 1.05;
-        }
-
-        // Линия слева, подпись ПЕРЕД линией, полосы вправо, значения сразу после полос
-        function drawDualBars(svgId, rows, opts = {}) {
-            const svg = d3.select('#'+svgId);
-            svg.selectAll('*').remove();
-
-            const barH = opts.barHeight ?? 22;
-            const gap  = opts.gap ?? 10;
-            const minPadLbl = 90;
-            const minPadVal = 70;
-            const padT = 8, padB = 12;
-            const W = 320;
-
-            // замеряем подписи и значения
-            const meas = svg.append('g').attr('opacity', 0);
-            const mLabel = meas.append('text').attr('class','bar-label');
-            const mValue = meas.append('text').attr('class','bar-value');
-            const labelTexts = rows.map(d => d.label);
-            const valueTexts = rows.flatMap(d => [ `${fmtTU(d.a)}`, `${fmtTU(d.b)}` ]);
-            const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
-            const wValue = s => { mValue.text(s); return mValue.node().getComputedTextLength(); };
-            let maxLabelW = 0; labelTexts.forEach(s => maxLabelW = Math.max(maxLabelW, wLabel(s)));
-            let maxValueW = 0; valueTexts.forEach(s => maxValueW = Math.max(maxValueW, wValue(s)));
-            meas.remove();
-
-            let padLbl = Math.max(minPadLbl, Math.ceil(maxLabelW) + 12);
-            let padVal = Math.max(minPadVal, Math.ceil(maxValueW) + 10);
-            const minBarW = 100;
-            padLbl = Math.min(padLbl, W - padVal - minBarW);
-
-            const innerW = Math.max(minBarW, W - padLbl - padVal - 1);
-            const H = padT + rows.length*(barH+gap) - gap + padB;
-            svg.attr('viewBox', `0 0 ${W} ${H}`);
-
-            const axisX = padLbl;
-            const xMax = opts.sharedMax ?? computeSharedMax([rows]);
-            const x = d3.scaleLinear().domain([0, xMax]).range([0, innerW]);
-
-            // вертикальная линия-ось
-            svg.append('line')
-                .attr('class','origin-line')
-                .attr('x1', axisX).attr('y1', padT - 2)
-                .attr('x2', axisX).attr('y2', padT + rows.length*(barH+gap) - gap + 2);
-
-            const g = svg.append('g').attr('transform', `translate(${axisX + 1},${padT})`);
-
-            function pillRight(yTop, height, width){
-                const w = Math.max(0, +width||0);
-                if (w <= 0) return '';
-                const r = Math.min(height/2, w);
-                const xL = 0, xR = w, xRm = w - r;
-                const yT = yTop, yB = yTop + height;
-                return `M ${xL},${yT} H ${xRm} Q ${xR},${yT} ${xR},${yT+r} V ${xR},${yB-r} Q ${xR},${yB} ${xRm},${yB} H ${xL} Z`;
-            }
-
-            rows.forEach((d,i)=>{
-                const y = i*(barH+gap);
-                const half = (barH/2) - 2;
-
-                const aW = x(Math.max(0, +d.a||0));
-                g.append('path').attr('d', pillRight(y + 1, half, aW)).attr('class','barA-fill');
-
-                const bW = x(Math.max(0, +d.b||0));
-                g.append('path').attr('d', pillRight(y + barH - 1 - half, half, bW)).attr('class','barB-fill');
-
-                g.append('text').attr('class','bar-value')
-                    .attr('x', aW + 8).attr('y', y + 1 + half/2 + .5)
-                    .attr('text-anchor','start').text(`${fmtTU(d.a)}`);
-
-                g.append('text').attr('class','bar-value')
-                    .attr('x', bW + 8).attr('y', y + barH - 1 - half + half/2 + .5)
-                    .attr('text-anchor','start').text(`${fmtTU(d.b)}`);
-            });
-
-            // подписи показателей — ПЕРЕД линией
-            const labelsG = svg.append('g').attr('transform', `translate(${axisX - 8},${padT})`);
-            labelsG.selectAll('text').data(rows).enter().append('text')
-                .attr('class','bar-label')
-                .attr('x', 0).attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-                .attr('text-anchor', 'end').text(d=> d.label);
-        }
-
-        const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]);
-        drawDualBars('bars-left',  LEFT_BARS2,  { sharedMax: SHARED_MAX });
-        drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX });
-    </script>
-</body>
+// потом ещё раз:
+drawGauge('gauge-1', GAUGE_LEFT);
+drawGauge('gauge-2', GAUGE_RIGHT);
