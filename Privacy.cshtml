@@ -1,35 +1,53 @@
+/* Заливки "прошлый год" — те же цвета, но полупрозрачные */
+.area-boilers-prev  { fill: rgba(0, 210, 106, 0.25); }
+.area-turbines-prev { fill: rgba(255, 212, 0, 0.25); }
+.area-total-prev    { fill: rgba(116, 192, 255, 0.25); }
+
+/* Маленькие плашки в легенде */
+.sw-line-boilers{ background:#00d26a; }
+.sw-line-turbines{ background:#ffd400; }
+.sw-line-total{ background:#74c0ff; }
+
+.sw-area-boilers{ background:rgba(0,210,106,.25); border:1px solid #00d26a; }
+.sw-area-turbines{ background:rgba(255,212,0,.25); border:1px solid #ffd400; }
+.sw-area-total{ background:rgba(116,192,255,.25); border:1px solid #74c0ff; }
+
+.multi-legend{
+  color:#bdbdbd; font:12px/1 sans-serif; margin: 4px 0 6px; text-align:center;
+}
+.multi-legend .sw{
+  width:12px; height:12px; border-radius:3px; display:inline-block; margin:0 6px 0 12px;
+  vertical-align:middle;
+}
 <div class="lines-container">
   <div class="line-card">
     <div class="line-title" style="text-align:center;">Котлы / Турбины / Итоги (сумма)</div>
-    <div class="multi-legend" style="text-align:center;">
-      <span class="sw sw-boilers"></span>Котлы
-      <span class="sw sw-turbines" style="margin-left:14px;"></span>Турбины
-      <span class="sw sw-total" style="margin-left:14px;"></span>Итоги
+
+    <!-- Легенда: текущий год — линия, прошлый — заливка -->
+    <div class="multi-legend">
+      <span class="sw sw-line-boilers"></span>Котлы (тек.) 
+      <span class="sw sw-area-boilers"></span>Котлы (прошл.)
+      <span class="sw sw-line-turbines"></span>Турбины (тек.)
+      <span class="sw sw-area-turbines"></span>Турбины (прошл.)
+      <span class="sw sw-line-total"></span>Итоги (тек.)
+      <span class="sw sw-area-total"></span>Итоги (прошл.)
     </div>
+
     <svg id="line-multi" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
   </div>
 </div>
-/* значки в легенде для многосерийного графика */
-.sw-boilers{ background:#00d26a; }
-.sw-turbines{ background:#ffd400; }
-.sw-total{ background:#74c0ff; }
-.multi-legend{
-  color:#bdbdbd; font:12px/1 sans-serif;
-  margin: 4px 0 6px;
-}
-.line-boilers{ stroke:#00d26a; fill:none; stroke-width:2.5; }
-.line-turbines{ stroke:#ffd400; fill:none; stroke-width:2.5; }
-.line-total{ stroke:#74c0ff; fill:none; stroke-width:2.8; }
-.dot{ stroke:#111; stroke-width:1.5; }
-.dot-boilers{ fill:#00d26a; }
-.dot-turbines{ fill:#ffd400; }
-.dot-total{ fill:#74c0ff; }
-.axis path, .axis line{ stroke:#555; }
-.axis text{ fill:#bdbdbd; font:12px sans-serif; }
-.grid line{ stroke:#2f2f2f; }
-.grid .domain{ stroke:none; }
-// Один большой график с тремя сериями
-function drawMultiLine(svgId, seriesDefs){
+const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+// ТЕКУЩИЙ ГОД (как было)
+const SERIES_BOILERS  = [120,135,150,170,210,240,230,220,200,180,160,140];
+const SERIES_TURBINES = [ 90,110,130,150,190,210,205,195,185,170,155,145];
+const SERIES_TOTAL    = SERIES_BOILERS.map((v,i)=> v + SERIES_TURBINES[i]);
+
+// ПРОШЛЫЙ ГОД (пример — подрегулируй под свои данные)
+const SERIES_BOILERS_PREV  = [110,125,142,160,195,220,218,208,192,170,152,138];
+const SERIES_TURBINES_PREV = [ 85,100,120,140,175,195,190,182,170,158,146,132];
+const SERIES_TOTAL_PREV    = SERIES_BOILERS_PREV.map((v,i)=> v + SERIES_TURBINES_PREV[i]);
+  function drawMultiLine(svgId, seriesDefs, areaDefs){
   const svg = d3.select('#'+svgId);
   svg.selectAll('*').remove();
 
@@ -38,35 +56,48 @@ function drawMultiLine(svgId, seriesDefs){
   const innerW = W - m.left - m.right;
   const innerH = H - m.top - m.bottom;
 
-  const x = d3.scalePoint()
-    .domain(MONTHS)
-    .range([0, innerW])
-    .padding(0.5);
+  const x = d3.scalePoint().domain(MONTHS).range([0, innerW]).padding(0.5);
 
-  const yMax = d3.max(seriesDefs.flatMap(s => s.values)) || 0;
-  const y = d3.scaleLinear()
-    .domain([0, yMax * 1.1]).nice()
-    .range([innerH, 0]);
+  // масштаб Y учитывает и текущие линии, и прошлогодние области
+  const allVals = [
+    ...seriesDefs.flatMap(s => s.values),
+    ...areaDefs.flatMap(a => a.values)
+  ];
+  const yMax = d3.max(allVals) || 0;
+  const y = d3.scaleLinear().domain([0, yMax * 1.1]).nice().range([innerH, 0]);
 
   const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
 
   // сетка и оси
   g.append('g').attr('class','grid')
     .call(d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat(''));
-
   g.append('g').attr('class','axis')
     .call(d3.axisLeft(y).ticks(6).tickFormat(d => d3.format(',')(d).replace(/,/g,' ')));
-
   g.append('g').attr('class','axis')
     .attr('transform', `translate(0,${innerH})`)
     .call(d3.axisBottom(x).tickSize(0));
 
+  // генераторы
   const line = d3.line()
     .x((_,i)=> x(MONTHS[i]))
     .y(d => y(d))
     .curve(d3.curveMonotoneX);
 
-  // сами линии
+  const area = d3.area()
+    .x((_,i)=> x(MONTHS[i]))
+    .y0(y(0))
+    .y1(d => y(d))
+    .curve(d3.curveMonotoneX);
+
+  // СНАЧАЛА ЗАЛИВКИ ПРОШЛОГО ГОДА (под линиями)
+  areaDefs.forEach(a => {
+    g.append('path')
+      .datum(a.values)
+      .attr('class', a.areaClass)
+      .attr('d', area);
+  });
+
+  // затем ЛИНИИ ТЕКУЩЕГО ГОДА
   seriesDefs.forEach(s => {
     g.append('path')
       .datum(s.values)
@@ -74,7 +105,7 @@ function drawMultiLine(svgId, seriesDefs){
       .attr('d', line);
   });
 
-  // точки
+  // точки для текущего года
   seriesDefs.forEach(s => {
     g.selectAll('.'+s.dotClass)
       .data(s.values.map((v,i)=> ({v,i})))
@@ -85,7 +116,7 @@ function drawMultiLine(svgId, seriesDefs){
         .attr('cy', d=> y(d.v));
   });
 
-  // фокус: вертикальная линия + по одной крупной точке на серию
+  // фокус: вертикальная линия + по одной точке на текущие серии
   const focusLine = g.append('line')
     .attr('y1', 0).attr('y2', innerH)
     .attr('stroke', '#4a4a4a').attr('stroke-dasharray', '4 4')
@@ -100,10 +131,9 @@ function drawMultiLine(svgId, seriesDefs){
 
   const tip = d3.select('#tooltip');
 
-  // оверлей для ховера
+  // оверлей для наведения
   g.append('rect')
-    .attr('x', 0).attr('y', 0)
-    .attr('width', innerW).attr('height', innerH)
+    .attr('x', 0).attr('y', 0).attr('width', innerW).attr('height', innerH)
     .attr('fill', 'transparent')
     .on('mousemove', (event)=>{
       const [mx] = d3.pointer(event);
@@ -115,7 +145,6 @@ function drawMultiLine(svgId, seriesDefs){
         if (d < best){ best = d; idx = i; }
       }
       const xv = x(MONTHS[idx]);
-
       focusLine.attr('x1',xv).attr('x2',xv).style('opacity',1);
 
       focusDots.forEach((dot, k)=>{
@@ -123,7 +152,6 @@ function drawMultiLine(svgId, seriesDefs){
         dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
       });
 
-      // тултип с тремя значениями
       const fmt = d3.format(',');
       const val = v => fmt(v).replace(/,/g,' ');
       tip.style('opacity',1)
@@ -132,9 +160,9 @@ function drawMultiLine(svgId, seriesDefs){
          .html(`
           <div style="font:12px sans-serif; color:#fff;">
             <div style="color:#bdbdbd; margin-bottom:4px;"><b>${MONTHS[idx]}</b></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#00d26a;border-radius:50%;margin-right:6px;"></span>Котлы: ${val(seriesDefs[0].values[idx])}</div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${val(seriesDefs[1].values[idx])}</div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${val(seriesDefs[2].values[idx])}</b></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#00d26a;border-radius:50%;margin-right:6px;"></span>Котлы: ${val(seriesDefs[0].values[idx])} <span style="color:#9bd9b8;">(прошл.: ${val(areaDefs[0].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${val(seriesDefs[1].values[idx])} <span style="color:#ffe47a;">(прошл.: ${val(areaDefs[1].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${val(seriesDefs[2].values[idx])}</b> <span style="color:#b8dbff;">(прошл.: ${val(areaDefs[2].values[idx])})</span></div>
           </div>
          `);
     })
@@ -144,10 +172,15 @@ function drawMultiLine(svgId, seriesDefs){
       tip.style('opacity',0);
     });
 }
-
-// ВЫЗОВ
-drawMultiLine('line-multi', [
-  { title:'Котлы',   values: SERIES_BOILERS,  lineClass:'line-boilers',  dotClass:'dot-boilers',  focusFill:'#00d26a' },
-  { title:'Турбины', values: SERIES_TURBINES, lineClass:'line-turbines', dotClass:'dot-turbines', focusFill:'#ffd400' },
-  { title:'Итоги',   values: SERIES_TOTAL,    lineClass:'line-total',    dotClass:'dot-total',    focusFill:'#74c0ff' },
-]);
+drawMultiLine('line-multi',
+  [
+    { title:'Котлы',   values: SERIES_BOILERS,  lineClass:'line-boilers',  dotClass:'dot-boilers',  focusFill:'#00d26a' },
+    { title:'Турбины', values: SERIES_TURBINES, lineClass:'line-turbines', dotClass:'dot-turbines', focusFill:'#ffd400' },
+    { title:'Итоги',   values: SERIES_TOTAL,    lineClass:'line-total',    dotClass:'dot-total',    focusFill:'#74c0ff' },
+  ],
+  [
+    { title:'Котлы (прошл.)',   values: SERIES_BOILERS_PREV,  areaClass:'area-boilers-prev'  },
+    { title:'Турбины (прошл.)', values: SERIES_TURBINES_PREV, areaClass:'area-turbines-prev' },
+    { title:'Итоги (прошл.)',   values: SERIES_TOTAL_PREV,    areaClass:'area-total-prev'    },
+  ]
+);
