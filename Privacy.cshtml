@@ -1,182 +1,153 @@
-/* Контейнер и карточки под линейные графики */
-.lines-container{
-  display:flex;
-  flex-direction:column;  /* большие графики — один под другим */
-  gap:10px;
-  margin-top:10px;
+<div class="lines-container">
+  <div class="line-card">
+    <div class="line-title" style="text-align:center;">Котлы / Турбины / Итоги (сумма)</div>
+    <div class="multi-legend" style="text-align:center;">
+      <span class="sw sw-boilers"></span>Котлы
+      <span class="sw sw-turbines" style="margin-left:14px;"></span>Турбины
+      <span class="sw sw-total" style="margin-left:14px;"></span>Итоги
+    </div>
+    <svg id="line-multi" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</div>
+/* значки в легенде для многосерийного графика */
+.sw-boilers{ background:#00d26a; }
+.sw-turbines{ background:#ffd400; }
+.sw-total{ background:#74c0ff; }
+.multi-legend{
+  color:#bdbdbd; font:12px/1 sans-serif;
+  margin: 4px 0 6px;
 }
-.line-card{
-  width:100%;
-  background:#222;
-  border-radius:12px;
-  padding:10px 12px;
-  box-shadow:0 2px 10px rgba(0,0,0,.35);
-}
-.line-title{
-  margin:0 0 6px;
-  font-size:20px;
-  color:#ddd;
-  text-align:center;
-  letter-spacing:.2px;
-}
-.line-svg{ width:100%; height:auto; display:block; }
-
-/* Оси/сетка под тёмную тему */
-.axis path, .axis line{ stroke:#555; }
-.axis text{ fill:#bdbdbd; font:12px sans-serif; }
-.grid line{ stroke:#2f2f2f; }
-.grid .domain{ stroke:none; }
-
-/* Цвета серий */
 .line-boilers{ stroke:#00d26a; fill:none; stroke-width:2.5; }
 .line-turbines{ stroke:#ffd400; fill:none; stroke-width:2.5; }
 .line-total{ stroke:#74c0ff; fill:none; stroke-width:2.8; }
-
 .dot{ stroke:#111; stroke-width:1.5; }
 .dot-boilers{ fill:#00d26a; }
 .dot-turbines{ fill:#ffd400; }
 .dot-total{ fill:#74c0ff; }
-
-/* Подпись значения справа от общей серии (большим шрифтом) */
-.total-big{
-  color:#fff; font:700 28px/1 sans-serif;
-  margin-left:auto; margin-right:4px; /* прижать вправо в заголовке */
-}
-<div class="lines-container">
-  <div class="line-card">
-    <div class="line-title">Котлы</div>
-    <svg id="line-boilers" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-
-  <div class="line-card">
-    <div class="line-title">Турбины</div>
-    <svg id="line-turbines" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-
-  <div class="line-card">
-    <div class="line-title" style="display:flex; align-items:center; justify-content:center; gap:8px;">
-      Итоги (сумма)
-      <span id="total-big-value" class="total-big">—</span>
-    </div>
-    <svg id="line-total" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-</div>
-// ====== ДАННЫЕ ПО МЕСЯЦАМ (примерные константы) ======
-const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
-
-// значения для котлов и турбин (12 точек каждая)
-const SERIES_BOILERS = [120, 135, 150, 170, 210, 240, 230, 220, 200, 180, 160, 140];
-const SERIES_TURBINES = [90,  110, 130, 150, 190, 210, 205, 195, 185, 170, 155, 145];
-// итоговая — помесячная сумма
-const SERIES_TOTAL = SERIES_BOILERS.map((v,i)=> v + SERIES_TURBINES[i]);
-
-// для подписи «Итоги» справа — покажем ∑ за год (можно заменить на среднее и т.п.)
-const totalYear = SERIES_TOTAL.reduce((a,b)=>a+b,0);
-document.getElementById('total-big-value').textContent = totalYear.toLocaleString('ru-RU');
-
-// ====== РЕНДЕР ОДНОЙ ЛИНЕЙНОЙ СЕРИИ С ТОЧКАМИ И ПОДСВЕТКОЙ ======
-function drawSingleLine(svgId, values, opts){
+.axis path, .axis line{ stroke:#555; }
+.axis text{ fill:#bdbdbd; font:12px sans-serif; }
+.grid line{ stroke:#2f2f2f; }
+.grid .domain{ stroke:none; }
+// Один большой график с тремя сериями
+function drawMultiLine(svgId, seriesDefs){
   const svg = d3.select('#'+svgId);
   svg.selectAll('*').remove();
 
-  // базовая геометрия (работаем во viewBox для резиновой ширины)
   const W = 1000, H = 420;
   const m = {top: 28, right: 24, bottom: 48, left: 64};
   const innerW = W - m.left - m.right;
   const innerH = H - m.top - m.bottom;
 
-  // шкалы
   const x = d3.scalePoint()
     .domain(MONTHS)
     .range([0, innerW])
     .padding(0.5);
 
-  const yMax = d3.max(values) || 0;
+  const yMax = d3.max(seriesDefs.flatMap(s => s.values)) || 0;
   const y = d3.scaleLinear()
     .domain([0, yMax * 1.1]).nice()
     .range([innerH, 0]);
 
-  // оси и сетка
   const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
 
-  const yAxisGrid = d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat('');
-  g.append('g').attr('class','grid').call(yAxisGrid);
+  // сетка и оси
+  g.append('g').attr('class','grid')
+    .call(d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat(''));
 
-  const yAxis = d3.axisLeft(y).ticks(6).tickFormat(d => d3.format(',')(d).replace(/,/g,' '));
-  g.append('g').attr('class','axis').call(yAxis);
+  g.append('g').attr('class','axis')
+    .call(d3.axisLeft(y).ticks(6).tickFormat(d => d3.format(',')(d).replace(/,/g,' ')));
 
-  const xAxis = d3.axisBottom(x).tickSize(0);
-  g.append('g').attr('class','axis').attr('transform', `translate(0,${innerH})`).call(xAxis);
+  g.append('g').attr('class','axis')
+    .attr('transform', `translate(0,${innerH})`)
+    .call(d3.axisBottom(x).tickSize(0));
 
-  // линия
   const line = d3.line()
     .x((_,i)=> x(MONTHS[i]))
-    .y((d)=> y(d))
+    .y(d => y(d))
     .curve(d3.curveMonotoneX);
 
-  g.append('path')
-    .datum(values)
-    .attr('class', opts.lineClass) // цвет линии из CSS
-    .attr('d', line);
+  // сами линии
+  seriesDefs.forEach(s => {
+    g.append('path')
+      .datum(s.values)
+      .attr('class', s.lineClass)
+      .attr('d', line);
+  });
 
   // точки
-  const dots = g.selectAll('.dot')
-    .data(values.map((v,i)=> ({v, i})))
-    .enter().append('circle')
-      .attr('class', `dot ${opts.dotClass}`)
-      .attr('r', 4.5)
-      .attr('cx', d=> x(MONTHS[d.i]))
-      .attr('cy', d=> y(d.v));
+  seriesDefs.forEach(s => {
+    g.selectAll('.'+s.dotClass)
+      .data(s.values.map((v,i)=> ({v,i})))
+      .enter().append('circle')
+        .attr('class', `dot ${s.dotClass}`)
+        .attr('r', 4.5)
+        .attr('cx', d=> x(MONTHS[d.i]))
+        .attr('cy', d=> y(d.v));
+  });
 
-  // вертикальная направляющая + «фокус»-точка
+  // фокус: вертикальная линия + по одной крупной точке на серию
   const focusLine = g.append('line')
     .attr('y1', 0).attr('y2', innerH)
     .attr('stroke', '#4a4a4a').attr('stroke-dasharray', '4 4')
     .style('opacity', 0);
 
-  const focusDot = g.append('circle')
-    .attr('r', 6).attr('stroke', '#fff').attr('stroke-width', 2)
-    .attr('fill', opts.focusFill)
-    .style('opacity', 0);
+  const focusDots = seriesDefs.map(s =>
+    g.append('circle')
+      .attr('r', 6).attr('stroke','#fff').attr('stroke-width',2)
+      .attr('fill', s.focusFill)
+      .style('opacity', 0)
+  );
 
-  // тултип — используем уже существующий #tooltip
   const tip = d3.select('#tooltip');
 
-  // оверлей для наведения
+  // оверлей для ховера
   g.append('rect')
-    .attr('x', 0).attr('y', 0).attr('width', innerW).attr('height', innerH)
+    .attr('x', 0).attr('y', 0)
+    .attr('width', innerW).attr('height', innerH)
     .attr('fill', 'transparent')
     .on('mousemove', (event)=>{
       const [mx] = d3.pointer(event);
-      // ищем ближайший месяц
-      let nearest = 0, minDist = Infinity;
+      // ближайший месяц
+      let idx = 0, best = Infinity;
       for(let i=0;i<MONTHS.length;i++){
         const xi = x(MONTHS[i]);
         const d = Math.abs(mx - xi);
-        if (d < minDist){ minDist = d; nearest = i; }
+        if (d < best){ best = d; idx = i; }
       }
-      const xv = x(MONTHS[nearest]);
-      const yv = y(values[nearest]);
+      const xv = x(MONTHS[idx]);
 
-      focusLine.attr('x1', xv).attr('x2', xv).style('opacity', 1);
-      focusDot.attr('cx', xv).attr('cy', yv).style('opacity', 1);
+      focusLine.attr('x1',xv).attr('x2',xv).style('opacity',1);
 
-      tip.style('opacity', 1)
+      focusDots.forEach((dot, k)=>{
+        const v = seriesDefs[k].values[idx];
+        dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
+      });
+
+      // тултип с тремя значениями
+      const fmt = d3.format(',');
+      const val = v => fmt(v).replace(/,/g,' ');
+      tip.style('opacity',1)
          .style('left', (event.pageX + 12) + 'px')
-         .style('top',  (event.pageY - 20) + 'px')
-         .html(`<div style="font:12px sans-serif; color:#fff;">
-                  <div style="color:#bdbdbd">${opts.title}</div>
-                  <div><b>${MONTHS[nearest]}</b> — ${d3.format(',')(values[nearest]).replace(/,/g,' ')}</div>
-                </div>`);
+         .style('top',  (event.pageY - 24) + 'px')
+         .html(`
+          <div style="font:12px sans-serif; color:#fff;">
+            <div style="color:#bdbdbd; margin-bottom:4px;"><b>${MONTHS[idx]}</b></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#00d26a;border-radius:50%;margin-right:6px;"></span>Котлы: ${val(seriesDefs[0].values[idx])}</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${val(seriesDefs[1].values[idx])}</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${val(seriesDefs[2].values[idx])}</b></div>
+          </div>
+         `);
     })
     .on('mouseleave', ()=>{
-      focusLine.style('opacity', 0);
-      focusDot.style('opacity', 0);
-      tip.style('opacity', 0);
+      focusLine.style('opacity',0);
+      focusDots.forEach(dot => dot.style('opacity',0));
+      tip.style('opacity',0);
     });
 }
 
-// Рендерим три графика
-drawSingleLine('line-boilers',  SERIES_BOILERS, { title:'Котлы',   lineClass:'line-boilers',  dotClass:'dot-boilers',  focusFill:'#00d26a' });
-drawSingleLine('line-turbines', SERIES_TURBINES,{ title:'Турбины', lineClass:'line-turbines', dotClass:'dot-turbines', focusFill:'#ffd400' });
-drawSingleLine('line-total',    SERIES_TOTAL,   { title:'Итоги',   lineClass:'line-total',    dotClass:'dot-total',    focusFill:'#74c0ff' });
+// ВЫЗОВ
+drawMultiLine('line-multi', [
+  { title:'Котлы',   values: SERIES_BOILERS,  lineClass:'line-boilers',  dotClass:'dot-boilers',  focusFill:'#00d26a' },
+  { title:'Турбины', values: SERIES_TURBINES, lineClass:'line-turbines', dotClass:'dot-turbines', focusFill:'#ffd400' },
+  { title:'Итоги',   values: SERIES_TOTAL,    lineClass:'line-total',    dotClass:'dot-total',    focusFill:'#74c0ff' },
+]);
