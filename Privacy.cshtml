@@ -1,13 +1,27 @@
-/* Панель управления графиком */
+/* Карточка с много-серийным графиком — нужна для абсолютного позиционирования панели */
+.line-card{
+  position: relative; /* НОВОЕ */
+}
+
+/* Заголовок: оставим центр, но зарезервируем место справа под тумблеры */
+.line-card .line-title{
+  padding-right: 130px; /* чтобы заголовок не пересекался с панелью справа */
+}
+
+/* ПАНЕЛЬ ТУМБЛЕРОВ — переносим в правый верхний угол карточки */
 .line-controls{
+  position:absolute;    /* НОВОЕ: фиксируем в углу */
+  top:8px;              /* отступ сверху */
+  right:10px;           /* отступ справа */
   display:flex;
   gap:14px;
   align-items:center;
-  justify-content:center;
-  margin:4px 0 6px;
+  justify-content:flex-end;
+  margin:0;             /* был margin — убираем */
+  z-index: 2;           /* поверх легенды на узких экранах */
 }
 
-/* Тумблер */
+/* Тумблер — нейтральная серо-графитовая палитра */
 .switch{
   position:relative; display:inline-block;
   width:44px; height:24px;
@@ -15,267 +29,74 @@
 .switch input{ display:none; }
 .switch .slider{
   position:absolute; inset:0;
-  background:#444; border-radius:999px;
+  background:#555;              /* базовый фон (выкл) */
+  border-radius:999px;
   transition:.2s;
 }
 .switch .slider:before{
   content:""; position:absolute; height:18px; width:18px;
-  left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;
+  left:3px; top:3px;
+  background:#e9eaee;           /* нейтральный «белый» */
+  border-radius:50%;
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+  transition:.2s;
 }
-.switch input:checked + .slider{ background:#00d26a; }
+/* было #00d26a — СМЕНИЛИ на нейтральный */
+.switch input:checked + .slider{ background:#8f9399; }  /* серо-стальной */
+.switch input:checked + .slider:before{ transform:translateX(20px); }
+
+.switch-label{
+  color:#bdbdbd; font:12px/1 sans-serif;
+  margin-left:4px; min-width:46px; text-align:left;
+}
+
+
+
+
+
+/* Карточка с графиком — нужна опорная система координат для абсолютного позиционирования */
+.line-card{
+  position: relative; /* ДОБАВИТЬ */
+}
+
+/* Панель переключателей — в правом верхнем углу */
+.line-controls{
+  position:absolute;     /* было: static */
+  top:8px;               /* отступ сверху */
+  right:12px;            /* отступ справа */
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:flex-end;
+  margin:0;              /* обнулили, чтобы не влиял старый margin */
+  z-index:2;             /* поверх SVG */
+}
+
+/* Тумблер — нейтральная палитра */
+.switch{
+  position:relative; display:inline-block;
+  width:44px; height:24px;
+}
+.switch input{ display:none; }
+.switch .slider{
+  position:absolute; inset:0;
+  background:#3f3f3f;          /* тёмно-серый (выкл) */
+  border-radius:999px;
+  transition:.2s;
+  box-shadow: inset 0 0 0 1px #555;
+}
+.switch .slider:before{
+  content:""; position:absolute; height:18px; width:18px;
+  left:3px; top:3px;
+  background:#fff; border-radius:50%; transition:.2s;
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+}
+.switch input:checked + .slider{
+  background:#8e8e8e;          /* нейтральный серый (вкл), НЕ зелёный */
+  box-shadow: inset 0 0 0 1px #a0a0a0;
+}
 .switch input:checked + .slider:before{ transform:translateX(20px); }
 
 .switch-label{
   color:#bdbdbd; font:12px/1 sans-serif; margin-left:4px; min-width:46px; text-align:left;
-}
-
-/* Значки в легенде (если ещё нет) */
-.sw-line-boilers{ background:#00d26a; }
-.sw-line-turbines{ background:#ffd400; }
-.sw-line-total{ background:#74c0ff; }
-.sw-area-boilers{ background:rgba(0,210,106,.25); border:1px solid #00d26a; }
-.sw-area-turbines{ background:rgba(255,212,0,.25); border:1px solid #ffd400; }
-.sw-area-total{ background:rgba(116,192,255,.25); border:1px solid #74c0ff; }
-.multi-legend{
-  color:#bdbdbd; font:12px/1 sans-serif; margin: 4px 0 6px; text-align:center;
-}
-.multi-legend .sw{
-  width:12px; height:12px; border-radius:3px; display:inline-block; margin:0 6px 0 12px;
-  vertical-align:middle;
-}
-<div class="lines-container">
-  <div class="line-card">
-    <div class="line-title" style="text-align:center;">Котлы / Турбины / Итоги (сумма)</div>
-
-    <!-- ПАНЕЛЬ ПЕРЕКЛЮЧАТЕЛЕЙ -->
-    <div class="line-controls">
-      <!-- ₽ / ТУТ -->
-      <label class="switch">
-        <input type="checkbox" id="toggle-currency">
-        <span class="slider"></span>
-      </label>
-      <span class="switch-label" id="label-currency">ТУТ</span>
-
-      <!-- Накопительно -->
-      <label class="switch" style="margin-left:18px;">
-        <input type="checkbox" id="toggle-cum">
-        <span class="slider"></span>
-      </label>
-      <span class="switch-label">Накопительно</span>
-    </div>
-
-    <!-- ЛЕГЕНДА (текущий год — линия, прошлый — заливка) -->
-    <div class="multi-legend">
-      <span class="sw sw-line-boilers"></span>Котлы (тек.)
-      <span class="sw sw-area-boilers"></span>Котлы (прошл.)
-      <span class="sw sw-line-turbines" style="margin-left:14px;"></span>Турбины (тек.)
-      <span class="sw sw-area-turbines"></span>Турбины (прошл.)
-      <span class="sw sw-line-total" style="margin-left:14px;"></span>Итоги (тек.)
-      <span class="sw sw-area-total"></span>Итоги (прошл.)
-    </div>
-
-    <svg id="line-multi" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
-  </div>
-</div>
-/* ===== Настройки переключателей ===== */
-const RUB_PER_TUT = 5000; // коэффициент конвертации (измени при необходимости)
-let isRub = false;        // false = ТУТ, true = ₽
-let isCum = false;        // false = помесячно, true = накопительно
-
-// Базовые массивы (должны уже быть объявлены где-то выше):
-// MONTHS, SERIES_BOILERS, SERIES_TURBINES, SERIES_TOTAL
-// SERIES_BOILERS_PREV, SERIES_TURBINES_PREV, SERIES_TOTAL_PREV
-
-// Форматтеры
-const _fmtN = d3.format(',');
-const fmtIntSp = n => _fmtN(Math.round(n)).replace(/,/g,' ');
-function fmtMoneyShort(n){
-  const abs = Math.abs(n);
-  if (abs >= 1e9)  return `₽ ${(n/1e9).toFixed(1).replace('.', ',')} млрд`;
-  if (abs >= 1e6)  return `₽ ${(n/1e6).toFixed(1).replace('.', ',')} млн`;
-  if (abs >= 1e3)  return `₽ ${(n/1e3).toFixed(1).replace('.', ',')} тыс`;
-  return `₽ ${fmtIntSp(n)}`;
-}
-
-// Преобразования
-const toCum = arr => arr.reduce((acc,v,i)=> (acc[i]=(i?acc[i-1]:0)+v, acc), []);
-const toRub = arr => arr.map(v => v * RUB_PER_TUT);
-
-// Применить текущие тумблеры к данным (возвращает новые массивы)
-function transformAll(){
-  let b = SERIES_BOILERS.slice();
-  let t = SERIES_TURBINES.slice();
-  let s = SERIES_TOTAL.slice();
-
-  let bp = SERIES_BOILERS_PREV.slice();
-  let tp = SERIES_TURBINES_PREV.slice();
-  let sp = SERIES_TOTAL_PREV.slice();
-
-  if (isCum){
-    b = toCum(b); t = toCum(t); s = toCum(s);
-    bp = toCum(bp); tp = toCum(tp); sp = toCum(sp);
-  }
-  if (isRub){
-    b = toRub(b); t = toRub(t); s = toRub(s);
-    bp = toRub(bp); tp = toRub(tp); sp = toRub(sp);
-  }
-  return { b,t,s,bp,tp,sp };
-}
-
-// Перерисовка с учётом тумблеров
-function rerender(){
-  const { b,t,s,bp,tp,sp } = transformAll();
-
-  // Обновим подпись единиц у оси/подсказок
-  const unitInfo = {
-    unitText: isRub ? '₽' : 'ТУТ',
-    formatVal(v){
-      return isRub ? fmtMoneyShort(v) : `${fmtIntSp(v)} ТУТ`;
-    }
-  };
-
-  // Рисуем (замени ниже вызов на твой drawMultiLine с поддержкой unitText/formatVal в тултипе)
-  drawMultiLineEnhanced('line-multi',
-    [
-      { title:'Котлы',   values: b, lineClass:'line-boilers',  dotClass:'dot-boilers',  focusFill:'#00d26a' },
-      { title:'Турбины', values: t, lineClass:'line-turbines', dotClass:'dot-turbines', focusFill:'#ffd400' },
-      { title:'Итоги',   values: s, lineClass:'line-total',    dotClass:'dot-total',    focusFill:'#74c0ff' },
-    ],
-    [
-      { title:'Котлы (прошл.)',   values: bp, areaClass:'area-boilers-prev'  },
-      { title:'Турбины (прошл.)', values: tp, areaClass:'area-turbines-prev' },
-      { title:'Итоги (прошл.)',   values: sp, areaClass:'area-total-prev'    },
-    ],
-    unitInfo
-  );
-
-  // Обновить подпись возле тумблера валюты
-  document.getElementById('label-currency').textContent = isRub ? '₽' : 'ТУТ';
-}
-
-// Слушатели тумблеров
-document.getElementById('toggle-currency').addEventListener('change', e=>{
-  isRub = e.target.checked;
-  rerender();
-});
-document.getElementById('toggle-cum').addEventListener('change', e=>{
-  isCum = e.target.checked;
-  rerender();
-});
-
-// Первый рендер
-rerender();
-function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
-  const svg = d3.select('#'+svgId);
-  svg.selectAll('*').remove();
-
-  const W = 1000, H = 420;
-  const m = {top: 28, right: 24, bottom: 48, left: 64};
-  const innerW = W - m.left - m.right;
-  const innerH = H - m.top - m.bottom;
-
-  const x = d3.scalePoint().domain(MONTHS).range([0, innerW]).padding(0.5);
-
-  const allVals = [
-    ...seriesDefs.flatMap(s => s.values),
-    ...areaDefs.flatMap(a => a.values)
-  ];
-  const yMax = d3.max(allVals) || 0;
-  const y = d3.scaleLinear().domain([0, yMax * 1.1]).nice().range([innerH, 0]);
-
-  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
-
-  // сетка и оси
-  g.append('g').attr('class','grid')
-    .call(d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat(''));
-  g.append('g').attr('class','axis')
-    .call(d3.axisLeft(y).ticks(6).tickFormat(d => d3.format(',')(d).replace(/,/g,' ')));
-  g.append('g').attr('class','axis')
-    .attr('transform', `translate(0,${innerH})`)
-    .call(d3.axisBottom(x).tickSize(0));
-
-  // необязательная подпись оси Y (единицы)
-  g.append('text')
-    .attr('x', -m.left + 4).attr('y', -8)
-    .attr('fill', '#bdbdbd').attr('font-family','sans-serif').attr('font-size','12px')
-    .text(unitInfo.unitText);
-
-  const line = d3.line().x((_,i)=> x(MONTHS[i])).y(d => y(d)).curve(d3.curveMonotoneX);
-  const area = d3.area().x((_,i)=> x(MONTHS[i])).y0(y(0)).y1(d => y(d)).curve(d3.curveMonotoneX);
-
-  // СНАЧАЛА — заливки прошлого года
-  areaDefs.forEach(a => {
-    g.append('path').datum(a.values).attr('class', a.areaClass).attr('d', area);
-  });
-
-  // ПОТОМ — линии текущего года
-  seriesDefs.forEach(s => {
-    g.append('path').datum(s.values).attr('class', s.lineClass).attr('d', line);
-  });
-
-  // точки текущего года
-  seriesDefs.forEach(s => {
-    g.selectAll('.'+s.dotClass)
-      .data(s.values.map((v,i)=> ({v,i})))
-      .enter().append('circle')
-        .attr('class', `dot ${s.dotClass}`)
-        .attr('r', 4.5)
-        .attr('cx', d=> x(MONTHS[d.i]))
-        .attr('cy', d=> y(d.v));
-  });
-
-  // фокус
-  const focusLine = g.append('line')
-    .attr('y1', 0).attr('y2', innerH)
-    .attr('stroke', '#4a4a4a').attr('stroke-dasharray', '4 4')
-    .style('opacity', 0);
-
-  const focusDots = seriesDefs.map(s =>
-    g.append('circle')
-      .attr('r', 6).attr('stroke','#fff').attr('stroke-width',2)
-      .attr('fill', s.focusFill)
-      .style('opacity', 0)
-  );
-
-  const tip = d3.select('#tooltip');
-
-  // оверлей
-  g.append('rect')
-    .attr('x', 0).attr('y', 0).attr('width', innerW).attr('height', innerH)
-    .attr('fill', 'transparent')
-    .on('mousemove', (event)=>{
-      const [mx] = d3.pointer(event);
-      // ближайший месяц
-      let idx = 0, best = Infinity;
-      for(let i=0;i<MONTHS.length;i++){
-        const xi = x(MONTHS[i]);
-        const d = Math.abs(mx - xi);
-        if (d < best){ best = d; idx = i; }
-      }
-      const xv = x(MONTHS[idx]);
-      focusLine.attr('x1',xv).attr('x2',xv).style('opacity',1);
-
-      focusDots.forEach((dot, k)=>{
-        const v = seriesDefs[k].values[idx];
-        dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
-      });
-
-      const val = unitInfo.formatVal;
-      tip.style('opacity',1)
-         .style('left', (event.pageX + 12) + 'px')
-         .style('top',  (event.pageY - 24) + 'px')
-         .html(`
-          <div style="font:12px sans-serif; color:#fff;">
-            <div style="color:#bdbdbd; margin-bottom:4px;"><b>${MONTHS[idx]}</b></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#00d26a;border-radius:50%;margin-right:6px;"></span>Котлы: ${val(seriesDefs[0].values[idx])} <span style="color:#9bd9b8;">(прошл.: ${val(areaDefs[0].values[idx])})</span></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${val(seriesDefs[1].values[idx])} <span style="color:#ffe47a;">(прошл.: ${val(areaDefs[1].values[idx])})</span></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${val(seriesDefs[2].values[idx])}</b> <span style="color:#b8dbff;">(прошл.: ${val(areaDefs[2].values[idx])})</span></div>
-          </div>
-         `);
-    })
-    .on('mouseleave', ()=>{
-      focusLine.style('opacity',0);
-      focusDots.forEach(dot => dot.style('opacity',0));
-      tip.style('opacity',0);
-    });
 }
