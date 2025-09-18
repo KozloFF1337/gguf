@@ -1,102 +1,74 @@
-/* Карточка с много-серийным графиком — нужна для абсолютного позиционирования панели */
-.line-card{
-  position: relative; /* НОВОЕ */
-}
+function drawGauge(svgId, value, {start=-Math.PI/2, end=Math.PI/2} = {}){
+  const svg = d3.select('#'+svgId);
+  svg.selectAll('*').remove();
 
-/* Заголовок: оставим центр, но зарезервируем место справа под тумблеры */
-.line-card .line-title{
-  padding-right: 130px; /* чтобы заголовок не пересекался с панелью справа */
-}
+  // Геометрия
+  const W = 320, H = 180;
+  const cx = W/2;
+  const rOuter = (W/2) - 1;
+  const thickness = 28;
+  const rInner = rOuter - thickness;
+  const cy = rOuter + 10;
 
-/* ПАНЕЛЬ ТУМБЛЕРОВ — переносим в правый верхний угол карточки */
-.line-controls{
-  position:absolute;    /* НОВОЕ: фиксируем в углу */
-  top:8px;              /* отступ сверху */
-  right:10px;           /* отступ справа */
-  display:flex;
-  gap:14px;
-  align-items:center;
-  justify-content:flex-end;
-  margin:0;             /* был margin — убираем */
-  z-index: 2;           /* поверх легенды на узких экранах */
-}
+  // Кламп значения
+  const v = Math.max(0, Math.min(100, value));
 
-/* Тумблер — нейтральная серо-графитовая палитра */
-.switch{
-  position:relative; display:inline-block;
-  width:44px; height:24px;
-}
-.switch input{ display:none; }
-.switch .slider{
-  position:absolute; inset:0;
-  background:#555;              /* базовый фон (выкл) */
-  border-radius:999px;
-  transition:.2s;
-}
-.switch .slider:before{
-  content:""; position:absolute; height:18px; width:18px;
-  left:3px; top:3px;
-  background:#e9eaee;           /* нейтральный «белый» */
-  border-radius:50%;
-  box-shadow:0 1px 2px rgba(0,0,0,.35);
-  transition:.2s;
-}
-/* было #00d26a — СМЕНИЛИ на нейтральный */
-.switch input:checked + .slider{ background:#8f9399; }  /* серо-стальной */
-.switch input:checked + .slider:before{ transform:translateX(20px); }
+  // --- градиент: умная ориентация ---
+  const defs = svg.append('defs');
+  const gradId = `grad-${svgId}`;
 
-.switch-label{
-  color:#bdbdbd; font:12px/1 sans-serif;
-  margin-left:4px; min-width:46px; text-align:left;
-}
+  // Критические углы для экстремумов по X/Y
+  const inRange = (a,b,x)=> (a<=x && x<=b);
+  const AX = [start, end];                       // для X — кандидаты: start,end, 0, π
+  if (inRange(start,end,0))   AX.push(0);
+  if (inRange(start,end,Math.PI)) AX.push(Math.PI);
 
+  const AY = [start, end];                       // для Y — кандидаты: start,end, -π/2, π/2
+  if (inRange(start,end,-Math.PI/2)) AY.push(-Math.PI/2);
+  if (inRange(start,end, Math.PI/2)) AY.push( Math.PI/2);
 
+  const xs = AX.map(a => cx + rOuter*Math.cos(a));
+  const ys = AY.map(a => cy + rOuter*Math.sin(a));
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
 
+  const g = defs.append('linearGradient')
+    .attr('id', gradId)
+    .attr('gradientUnits','userSpaceOnUse');
 
+  // Если дуга «узкая» по X (как правая/левая полудуга) — делаем вертикальный градиент
+  if (Math.abs(maxX - minX) < 1e-3){
+    g.attr('x1', cx).attr('y1', minY)
+     .attr('x2', cx).attr('y2', maxY);
+  } else {
+    // Иначе — горизонтальный
+    g.attr('x1', minX).attr('y1', cy)
+     .attr('x2', maxX).attr('y2', cy);
+  }
 
-/* Карточка с графиком — нужна опорная система координат для абсолютного позиционирования */
-.line-card{
-  position: relative; /* ДОБАВИТЬ */
-}
+  g.append('stop').attr('offset','0%').attr('stop-color','#ff2d2d');   // красный
+  g.append('stop').attr('offset','50%').attr('stop-color','#ffd400');  // жёлтый
+  g.append('stop').attr('offset','100%').attr('stop-color','#00d26a'); // зелёный
 
-/* Панель переключателей — в правом верхнем углу */
-.line-controls{
-  position:absolute;     /* было: static */
-  top:8px;               /* отступ сверху */
-  right:12px;            /* отступ справа */
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content:flex-end;
-  margin:0;              /* обнулили, чтобы не влиял старый margin */
-  z-index:2;             /* поверх SVG */
-}
+  // Шкала угла
+  const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
 
-/* Тумблер — нейтральная палитра */
-.switch{
-  position:relative; display:inline-block;
-  width:44px; height:24px;
-}
-.switch input{ display:none; }
-.switch .slider{
-  position:absolute; inset:0;
-  background:#3f3f3f;          /* тёмно-серый (выкл) */
-  border-radius:999px;
-  transition:.2s;
-  box-shadow: inset 0 0 0 1px #555;
-}
-.switch .slider:before{
-  content:""; position:absolute; height:18px; width:18px;
-  left:3px; top:3px;
-  background:#fff; border-radius:50%; transition:.2s;
-  box-shadow:0 1px 2px rgba(0,0,0,.35);
-}
-.switch input:checked + .slider{
-  background:#8e8e8e;          /* нейтральный серый (вкл), НЕ зелёный */
-  box-shadow: inset 0 0 0 1px #a0a0a0;
-}
-.switch input:checked + .slider:before{ transform:translateX(20px); }
+  // Фон дуги
+  svg.append('g').attr('transform', `translate(${cx},${cy})`)
+    .append('path')
+      .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(end))
+      .attr('fill', '#3a3a3a');
 
-.switch-label{
-  color:#bdbdbd; font:12px/1 sans-serif; margin-left:4px; min-width:46px; text-align:left;
+  // Значение (дуга с градиентом)
+  svg.append('g').attr('transform', `translate(${cx},${cy})`)
+    .append('path')
+      .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(scale(v)))
+      .attr('fill', `url(#${gradId})`);
+
+  // (опционально) число в центре — можно убрать, если не нужно
+  svg.append('text')
+    .attr('x', cx).attr('y', cy - 10)
+    .attr('text-anchor','middle').attr('fill','#fff')
+    .attr('font-family','sans-serif').attr('font-size','28px').attr('font-weight','700')
+    .text(`${Math.round(v)}%`);
 }
