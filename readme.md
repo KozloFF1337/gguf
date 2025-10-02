@@ -1,1 +1,25 @@
 
+CREATE TABLE "Boilers" (
+    "Id" SERIAL PRIMARY KEY,
+    "StationID" INT NOT NULL,
+    "BoilerID" VARCHAR(50) NOT NULL,
+    "KPD" DOUBLE PRECISION NOT NULL,
+    "Production" DOUBLE PRECISION NOT NULL,
+    "Consumption" DOUBLE PRECISION NOT NULL,
+    "Hours" DOUBLE PRECISION NOT NULL,
+    "Date" TIMESTAMP NOT NULL,
+    "PeriodType" INT NOT NULL,
+    "PeriodValue" INT NOT NULL
+);
+
+CREATE TABLE "Turbins" (
+    "Id" SERIAL PRIMARY KEY,
+    "StationID" INT NOT NULL,
+    "TurbinID" VARCHAR(50) NOT NULL,
+    "URT" DOUBLE PRECISION NOT NULL,
+    "Consumption" DOUBLE PRECISION NOT NULL,
+    "Hours" DOUBLE PRECISION NOT NULL,
+    "Date" TIMESTAMP NOT NULL,
+    "PeriodType" INT NOT NULL,
+    "PeriodValue" INT NOT NULL
+);
