@@ -210,6 +210,14 @@
     <div id="tooltip" class="tooltip"></div> <!-- Специальный элемент для всплывающей подсказки -->
 
     <script>
+        function reloadPage() {
+            const selectedPeriod = document.getElementById('periodSelect').value;
+            const url = `@Url.Action("Visualisation", "Home")?selectedPeriod=${selectedPeriod}`;
+            window.location.href = url;
+        }
+    </script>
+
+    <script>
         const stations = {
             25: `РГРЭС`,   // для Рефтинской
             9: `ТУГРЭС`,    // для Томь-Усинской
@@ -235,11 +243,11 @@
         };
         const stationLinks = {
             25: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%AD%D0%A1',   // для Рефтинской
-            9: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A2%D0%A3%D0%93%D0%A0%D0%AD%D0%A1',    // для Томь-Усинской
-            15: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B5%D0%BB%D0%93%D0%A0%D0%AD%D0%A1',   // для Беловской
-            1: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%93%D0%A0%D0%AD%D0%A1',    // для Назаровской
-            24: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%93%D0%A0%D0%AD%D0%A1-2',   // для Красноярской-2
-            26: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9F%D0%A0%D0%93%D0%A0%D0%AD%D0%A1',    // для Приморской
+            9: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A2%D0%A3%D0%93%D0%A0%D0%ЭС',    // для Томь-Усинской
+            15: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B5%D0%BB%D0%93%D0%A0%D0%ЭС',   // для Беловской
+            1: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%93%D0%A0%D0%ЭС',    // для Назаровской
+            24: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%93%D0%A0%D0%ЭС-2',   // для Красноярской-2
+            26: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9F%D0%A0%D0%93%D0%A0%D0%ЭС',    // для Приморской
             14: `КЕМТЭЦ`,
             3: `Н-КЕМТЭЦ`,
             6: `БАРТЭЦ-2`,
@@ -423,6 +431,25 @@
             "9": 1914.2
         };
         const test_kpdvalues = {
+            "01M": 0,
+            "02M": 0, //нет данных
+            "03M": 0, //нет данных
+            "04M": 0,
+            "05M": 0,
+            "06M": 0, 
+            "07M": 0, //нет данных
+            "08M": 0,
+            "09M": 0,
+            "10M": 0,
+            "11M": 0, //нет данных
+            "12M": 0,
+            "13M": 0, //нет данных
+            "14M": 0,
+            "15M": 0,
+            "16M": 0, 
+            "17M": 0, //нет данных
+            "18M": 0,
+            "19M": 0,
             "01": 0,
             "02": 0, //нет данных
             "03": 0, //нет данных
@@ -479,7 +506,7 @@
             "16Б": 0, 
             "17Б": 0, //нет данных
             "18Б": 0,
-            "19Б": 0,
+            "19Б": 0
         };
         const test_urtvalues = {
             "1": 0,
@@ -557,26 +584,55 @@
             children: turbinsData.map(item => ({
                 urt: item.URT,
                 size: item.Consumption,
-                station: item.stationID,
-                turbin: item.turbinID,
-                urt_percent: (((item.URT - (urtvalues[item.stationID][parseInt(item.turbinID)] > 0 ? urtvalues[item.stationID][parseInt(item.turbinID)] : 2300)) / item.URT) * 100), // Новое поле с вычисленным значением
-                urt_percent_normal: urtvalues[item.stationID][parseInt(item.turbinID)] > 0 ? urtvalues[item.stationID][parseInt(item.turbinID)] : 2300
+                station: item.StationID,
+                turbin: item.TurbinID,
+                urt_percent: (((item.URT - (urtvalues[item.StationID][parseInt(item.TurbinID)] > 0 ? urtvalues[item.StationID][parseInt(item.TurbinID)] : 2300)) / item.URT) * 100), // Новое поле с вычисленным значением
+                urt_percent_normal: urtvalues[item.StationID][parseInt(item.TurbinID)] > 0 ? urtvalues[item.StationID][parseInt(item.TurbinID)] : 2300
             }))
         };
-
+        
         const hierarchicalData_boiler = {
-            name: "Boilers",
-            children: boilersData.map(item => ({
-                kpd: item.KPD,
-                size: item.Production,
-                station: item.StationID,
-                boiler: item.BoilerID,
-                kpd_percent: (((item.KPD - (kpdvalues[item.StationID][item.BoilerID] > 0 ? kpdvalues[item.StationID][item.BoilerID] : 91)) / item.KPD) * 100), // Новое поле с вычисленным значением
-                kpd_percent_normal: kpdvalues[item.StationID][item.BoilerID] > 0 ? kpdvalues[item.StationID][item.BoilerID] : 91
-            })) 
-        };
+    name: "Boilers",
+    children: boilersData.map(item => {
+        const stationID = item.StationID;
+        const boilerID = item.BoilerID;
+        
+        // Логирование для отладки
+        console.log('Processing boiler:', {
+            stationID: stationID,
+            boilerID: boilerID,
+            stationName: stations[stationID] || 'Unknown station',
+            hasKpdValues: kpdvalues.hasOwnProperty(stationID),
+            kpdValuesForStation: kpdvalues[stationID] ? Object.keys(kpdvalues[stationID]) : 'No kpdvalues for station',
+            hasBoilerInKpd: kpdvalues[stationID] ? kpdvalues[stationID].hasOwnProperty(boilerID) : false
+        });
 
-        // Объединяем данные и сортируем по stationID
+        // Проверяем существование данных
+        if (!kpdvalues[stationID]) {
+            console.error(`❌ No kpdvalues found for station ID: ${stationID} (${stations[stationID] || 'Unknown'})`);
+            console.error(`Available stations in kpdvalues:`, Object.keys(kpdvalues));
+        } else if (!kpdvalues[stationID].hasOwnProperty(boilerID)) {
+            console.warn(`⚠️ No kpd value found for boiler ${boilerID} at station ${stationID} (${stations[stationID] || 'Unknown'})`);
+            console.warn(`Available boilers for station ${stationID}:`, Object.keys(kpdvalues[stationID]));
+        }
+
+        const kpdValue = kpdvalues[stationID] ? kpdvalues[stationID][boilerID] : undefined;
+        const baseKPD = kpdValue > 0 ? kpdValue : 91;
+        const kpd_percent = (((item.KPD - baseKPD) / item.KPD) * 100);
+        const kpd_percent_normal = baseKPD;
+
+        return {
+            kpd: item.KPD,
+            size: item.Production,
+            station: item.StationID,
+            boiler: item.BoilerID,
+            kpd_percent: kpd_percent,
+            kpd_percent_normal: kpd_percent_normal
+        };
+    }) 
+};
+
+        // Объединяем данные и сортируем по StationID
         const combinedData = hierarchicalData_turbin.children.concat(hierarchicalData_boiler.children);
         
         
@@ -599,7 +655,7 @@
 
         }
 
-        // Группируем данные по stationID
+        // Группируем данные по StationID
         const groupedData = {};
         combinedData.forEach(item => {
             if (!groupedData[item.station]) {
@@ -610,7 +666,7 @@
 
         // Создаем массив объектов для рейтинга
         const ratings = Object.keys(groupedData).map(key => ({
-            stationID: key,
+            StationID: key,
             rating: calculateRating(groupedData[key])
         }));
 
@@ -626,7 +682,7 @@
                 }
 
         // Обновленные функции highlightStation и resetHighlight
-        function highlightStation(stationID) {
+        function highlightStation(StationID) {
         // Затемняем все элементы и текст
         d3.selectAll(".node rect")
         .style("opacity", 0.3);
@@ -635,12 +691,12 @@
 
         // Подсвечиваем элементы выбранной станции
         d3.selectAll(".node")
-            .filter(d => d.data && d.data.station == stationID)
+            .filter(d => d.data && d.data.station == StationID)
             .select("rect")
             .style("opacity", 1);
 
         d3.selectAll(".node")
-            .filter(d => d.data && d.data.station == stationID)
+            .filter(d => d.data && d.data.station == StationID)
             .selectAll("text")
             .style("opacity", 1);
 
@@ -659,14 +715,14 @@
             const ratingInfo = cardDiv.append('div')
                 .attr('class', 'rating-info')
                 .on('click', function() {
-                    window.open(stationLinks[rating.stationID], '_blank');
+                    window.open(stationLinks[rating.StationID], '_blank');
                 });
             ratingInfo.append('span')
                 .attr('class', 'rank-number')
                 .text(index + 1 + '.');
             ratingInfo.append('span')
                 .attr('class', 'user-name')
-                .text(stations[rating.stationID]);
+                .text(stations[rating.StationID]);
             ratingInfo.append('span')
                 .attr('class', selectColorForRating(rating.rating))
                 .text(`${rating.rating.toFixed(2)}%`);
@@ -675,7 +731,7 @@
                 .attr('class', 'radio-btn')
                 .on('click', function(e) {
                     e.stopPropagation();
-                    highlightStation(rating.stationID);
+                    highlightStation(rating.StationID);
                     // Помечаем выбранную радиокнопку
                     d3.selectAll('input[name="station"]').property('checked', false);
                     d3.select(this).select('input').property('checked', true);
@@ -683,7 +739,7 @@
             radioDiv.append('input')
                 .attr('type', 'radio')
                 .attr('name', 'station')
-                .attr('id', `station-${rating.stationID}`);
+                .attr('id', `station-${rating.StationID}`);
         }); 
         // Сбрасываем выделение при клике вне карточек
         document.addEventListener('click', function(e) {
