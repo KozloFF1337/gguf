@@ -242,7 +242,7 @@
             21: `БАРАБТЭЦ`
         };
         const stationLinks = {
-            25: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%AD%D0%A1',   // для Рефтинской
+            25: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%ЭС',   // для Рефтинской
             9: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A2%D0%A3%D0%93%D0%A0%D0%ЭС',    // для Томь-Усинской
             15: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B5%D0%BB%D0%93%D0%A0%D0%ЭС',   // для Беловской
             1: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%93%D0%A0%D0%ЭС',    // для Назаровской
@@ -928,25 +928,47 @@
                     const textContent = `${stations[d.data.station]} КА${d.data.boiler} ${d.data.kpd_percent.toFixed(2)}%`;
 
                     // Вычислим оптимальное количество символов в строке
-                    const MAX_CHARS_PER_LINE = Math.floor(rectWidth / 10); // Примерно 10 пикселей на символ
-                    const lines = wrapText(textContent, MAX_CHARS_PER_LINE); // Функция разрыва строки
+                    let fontSize = 16; // Начальный размер шрифта
+                    let maxCharsPerLine = Math.floor(rectWidth / fontSize); // Максимальное количество символов в строке
+                    let lines = wrapText(textContent, maxCharsPerLine);
+                    let reducedForWidth = false; // Флаг для отслеживания уменьшения из-за ширины
 
-                    // Первоначальный размер шрифта
-                    let fontSize = 12; // Исходный размер шрифта
-                    let validFontSizeFound = false;
+                    // Уменьшаем шрифт или количество символов, пока текст или отдельные слова не поместятся в прямоугольник
+                    while (fontSize > 6 && maxCharsPerLine > 1) {
+                        const totalHeight = lines.length * (fontSize + 4); // Общая высота текста с учетом межстрочного интервала
+                        const wordTooWide = lines.some(line => {
+                            const words = line.split(' ');
+                            return words.some(word => word.length * fontSize > rectWidth);
+                        });
 
-                    while (!validFontSizeFound && fontSize > 6) { // Пока не нашли подходящий размер и минимальный предел не достигнут
-                        const testLines = wrapText(textContent, Math.floor(rectWidth / fontSize));
-                        const isValid = testLines.every(line => line.length <= MAX_CHARS_PER_LINE);
-                        if (isValid) {
-                            validFontSizeFound = true;
-                        } else {
-                            fontSize--; // Уменьшаем размер шрифта на 1 пункт
+                        if (totalHeight <= rectHeight && !wordTooWide) {
+                            break; // Если текст и слова помещаются, выходим из цикла
                         }
+
+                        if (wordTooWide && fontSize > 6) {
+                            fontSize--; // Уменьшаем размер шрифта, чтобы слово поместилось
+                            reducedForWidth = true; // Отмечаем, что уменьшили из-за ширины
+                        } else if (maxCharsPerLine > 1) {
+                            maxCharsPerLine--; // Уменьшаем количество символов в строке
+                        } else {
+                            break; // Если достигнуты минимальные значения, выходим из цикла
+                        }
+
+                        lines = wrapText(textContent, maxCharsPerLine); // Пересчитываем строки
                     }
-                    
+
+                    // Если высота меньше 60, уменьшаем шрифт на 2 пункта
+                    if (rectHeight < 60 && fontSize > 9) {
+                        fontSize -= 4;
+                    }
+
+                    // Если шрифт был уменьшен из-за ширины, увеличиваем его на 2 пункта
+                    if (reducedForWidth && fontSize < 16) {
+                        fontSize += 2;
+                    }
+
                     // Центруем текст по вертикали
-                    const lineHeight = fontSize+4; // Средняя высота строки
+                    const lineHeight = fontSize + 4; // Средняя высота строки
                     const numLines = lines.length;
                     const yCenterOffset = ((numLines * lineHeight) - rectHeight) / 2;
 
@@ -955,12 +977,12 @@
                         g.append("text")
                             .attr("class", "centered-text node-text")
                             .attr("x", (d.x1 - d.x0) / 2) // Х-центр блока
-                            .attr("y", (index * lineHeight) - yCenterOffset + lineHeight/2 ) // Центрирование по вертикали
-                            .attr("font-size", `${fontSize}px`) // Размер шрифта
-                            .attr("font-family", "Arial") // Размер шрифта
-                            .attr("font-weight", "bold") // Жирный шрифт
-                            .attr("fill", "#dddddd") // Белый цвет текста
-                            .attr("text-anchor", "middle") // Выравнивание по центру
+                            .attr("y", (index * lineHeight) - yCenterOffset + lineHeight / 2) // Центрирование по вертикали
+                            .style("font-size", `${fontSize}px`) // Размер шрифта
+                            .style("font-family", "Arial") // Шрифт
+                            .style("font-weight", "bold") // Жирный шрифт
+                            .style("fill", "#dddddd") // Белый цвет текста
+                            .style("text-anchor", "middle") // Выравнивание по центру
                             .text(line);
                     });
                 });
