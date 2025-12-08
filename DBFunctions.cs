@@ -118,7 +118,6 @@ public static void GenerateDB_TA(TurbinRecord rec_TA, Dictionary<int, List<strin
             string sql_start = $"exec dbo.p_GetParamValuePivot '{Correct(dic.Key)}','Основная', ";
             string sql_end = ", '2025-01-01 00:00:00',  '2025-12-31 23:00:00',  'Сутки';";
             
-            // Парсим StationID и TurbinID
             rec_TA.StationID = short.Parse(code.Substring(11, 2));
             rec_TA.TurbinID = code.Substring(1, 2) + ((code[9] == '0') ? "" : code[9].ToString());
             rec_TA.TurbinID = rec_TA.TurbinID.Replace("A", "А").Replace("B", "Б");
@@ -131,16 +130,15 @@ public static void GenerateDB_TA(TurbinRecord rec_TA, Dictionary<int, List<strin
             {
                 try
                 {
-                    // Дата остаётся прежней
                     rec_TA.Date = DateTime.ParseExact(reader[0].ToString().Substring(0, 10), format, CultureInfo.InvariantCulture);
+                    rec_TA.URT = TryParseDouble(reader[1]);
+                    rec_TA.Consumption = TryParseDouble(reader[2]);
+                    rec_TA.Hours = int.TryParse(reader[3]?.ToString(), out var hours) ? hours : 0;
+                    rec_TA.variation = TryParseDouble(reader[4]);
                     
-                    // Читаем остальные поля
-                    rec_TA.URT = TryParseDouble(reader[1]);      // Значение URT
-                    rec_TA.Consumption = TryParseDouble(reader[2]); // Потребление
-                    rec_TA.Hours = int.TryParse(reader[3]?.ToString(), out var hours) ? hours : 0; // Кол-во часов
-                    rec_TA.variation = TryParseDouble(reader[4]); 
+                    // ✅ ДОБАВЛЕНО: Читаем 5-е значение (номинальный УРТ из T002DU)
+                    rec_TA.NominalURT = TryParseDouble(reader[5]);
                     
-                    // Вставляем запись в базу данных
                     using (var insertCommand = new NpgsqlCommand(insertQuerry_TA, connection1))
                     {
                         insertCommand.Parameters.AddWithValue("@TurbinID", rec_TA.TurbinID);
@@ -150,6 +148,9 @@ public static void GenerateDB_TA(TurbinRecord rec_TA, Dictionary<int, List<strin
                         insertCommand.Parameters.AddWithValue("@Consumption", rec_TA.Consumption);
                         insertCommand.Parameters.AddWithValue("@Hours", rec_TA.Hours);
                         insertCommand.Parameters.AddWithValue("@Variation", rec_TA.variation);
+                        
+                        // ✅ ДОБАВЛЕНО
+                        insertCommand.Parameters.AddWithValue("@NominalURT", rec_TA.NominalURT);
                         
                         insertCommand.ExecuteNonQuery();
                     }
@@ -178,159 +179,214 @@ public static void GenerateDB_TA(TurbinRecord rec_TA, Dictionary<int, List<strin
     }
 }
 
+
     public static void GetRelevantWeekData_TA(Turbin rec_WT, List<Turbin> weekTurbins, string select_TA, NpgsqlConnection connection1, SqlConnection connection)
+{
+    int index = weekTurbins.Count();
+    int temp_StationID = 0;
+    string temp_TurbinID = "0";
+    double sum_cons = 0;
+    double sum_multi_urt_cons = 0;
+    double last_consumption = 0;
+    DateTime temp_dt = new DateTime(2000, 1, 1);
+    
+    // ✅ ДОБАВЛЕНО
+    double sum_nominal_urt = 0;
+    int count = 0;
+    
+    using (var command = new NpgsqlCommand(select_TA, connection1))
     {
-        int index = weekTurbins.Count();
-        int temp_StationID = 0;
-        string temp_TurbinID = "0";
-        double sum_cons = 0;
-        double sum_multi_urt_cons = 0;
-        double last_consumption = 0;
-        DateTime temp_dt = new DateTime(2000, 1, 1);
-        using (var command = new NpgsqlCommand(select_TA, connection1))
+        using (var reader = command.ExecuteReader())
         {
-            using (var reader = command.ExecuteReader())
-            {int i = 1;
-                while (reader.Read())
+            int i = 1;
+            while (reader.Read())
+            {
+                if (temp_StationID == reader.GetInt32(reader.GetOrdinal("StationID")) && temp_TurbinID == reader.GetString(reader.GetOrdinal("TurbinID")))
                 {
-                    if (temp_StationID == reader.GetInt32(reader.GetOrdinal("StationID")) && temp_TurbinID == reader.GetString(reader.GetOrdinal("TurbinID")))
+                    sum_cons += reader.GetDouble(reader.GetOrdinal("consumption"));
+                    sum_multi_urt_cons += (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
+                    last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
+                    
+                    // ✅ ДОБАВЛЕНО
+                    sum_nominal_urt += reader.GetDouble(reader.GetOrdinal("nominal_urt"));
+                    count++;
+                    i++;
+                }
+                else
+                {
+                    if (DateTime.Now.AddDays(-7).Date <= temp_dt.Date)
                     {
-                        sum_cons += reader.GetDouble(reader.GetOrdinal("consumption"));
-                        sum_multi_urt_cons += (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
-                        last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
-                        i++;
+                        rec_WT.TurbinID = temp_TurbinID;
+                        rec_WT.StationID = temp_StationID;
+                        rec_WT.URT = (sum_multi_urt_cons / sum_cons);
+                        rec_WT.Consumption = last_consumption;
+                        rec_WT.PeriodValue = i;
+                        
+                        // ✅ ДОБАВЛЕНО: среднее номинальное значение
+                        rec_WT.NominalURT = count > 0 ? sum_nominal_urt / count : 0;
                     }
-                    else
-                    {
-                        if (DateTime.Now.AddDays(-7).Date <= temp_dt.Date)
-                        {
-                            rec_WT.TurbinID = temp_TurbinID;
-                            rec_WT.StationID = temp_StationID;
-                            rec_WT.URT = (sum_multi_urt_cons / sum_cons);
-                            rec_WT.Consumption = last_consumption;
-                            rec_WT.PeriodValue = i;
-                        }
-                        rec_WT.PeriodType = PeriodType.Week;
-                        weekTurbins.Add(rec_WT);
-                        rec_WT = new Turbin();
-                        i = 1;
-                        temp_StationID = reader.GetInt32(reader.GetOrdinal("StationID"));
-                        temp_TurbinID = reader.GetString(reader.GetOrdinal("TurbinID"));
-                        sum_cons = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        sum_multi_urt_cons = (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
-                        last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
-                    }
+                    rec_WT.PeriodType = PeriodType.Week;
+                    weekTurbins.Add(rec_WT);
+                    rec_WT = new Turbin();
+                    i = 1;
+                    count = 1; // ✅ ДОБАВЛЕНО
+                    temp_StationID = reader.GetInt32(reader.GetOrdinal("StationID"));
+                    temp_TurbinID = reader.GetString(reader.GetOrdinal("TurbinID"));
+                    sum_cons = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    sum_multi_urt_cons = (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
+                    last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
+                    
+                    // ✅ ДОБАВЛЕНО
+                    sum_nominal_urt = reader.GetDouble(reader.GetOrdinal("nominal_urt"));
                 }
             }
         }
-        weekTurbins.RemoveAt(index);
     }
-    public static void GetRelevantMonthData_TA(Turbin rec_WT, List<Turbin> weekTurbins, string select_TA, NpgsqlConnection connection1, SqlConnection connection)
+    weekTurbins.RemoveAt(index);
+}
+
+public static void GetRelevantMonthData_TA(Turbin rec_WT, List<Turbin> weekTurbins, string select_TA, NpgsqlConnection connection1, SqlConnection connection)
+{
+    int index = weekTurbins.Count();
+    int temp_StationID = 0;
+    string temp_TurbinID = "0";
+    double sum_cons = 0;
+    double sum_multi_urt_cons = 0;
+    double sum_urt = 0;
+    double last_consumption = 0;
+    DateTime temp_dt = new DateTime(2000, 1, 1);
+    
+    // ✅ ДОБАВЛЕНО
+    double sum_nominal_urt = 0;
+    int count = 0;
+    
+    using (var command = new NpgsqlCommand(select_TA, connection1))
     {
-        int index = weekTurbins.Count();
-        int temp_StationID = 0;
-        string temp_TurbinID = "0";
-        double sum_cons = 0;
-        double sum_multi_urt_cons = 0;
-        double sum_urt = 0;
-        double last_consumption = 0;
-        DateTime temp_dt = new DateTime(2000, 1, 1);
-        using (var command = new NpgsqlCommand(select_TA, connection1))
+        using (var reader = command.ExecuteReader())
         {
-            using (var reader = command.ExecuteReader())
-            {int i = 1;
-                while (reader.Read())
+            int i = 1;
+            while (reader.Read())
+            {
+                if (temp_StationID == reader.GetInt32(reader.GetOrdinal("StationID")) && temp_TurbinID == reader.GetString(reader.GetOrdinal("TurbinID")))
                 {
-                    if (temp_StationID == reader.GetInt32(reader.GetOrdinal("StationID")) && temp_TurbinID == reader.GetString(reader.GetOrdinal("TurbinID")))
+                    sum_cons += reader.GetDouble(reader.GetOrdinal("consumption"));
+                    sum_urt += reader.GetDouble(reader.GetOrdinal("URT"));
+                    sum_multi_urt_cons += (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
+                    last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
+                    
+                    // ✅ ДОБАВЛЕНО
+                    sum_nominal_urt += reader.GetDouble(reader.GetOrdinal("nominal_urt"));
+                    count++;
+                    i++;
+                }
+                else
+                {
+                    if (DateTime.Now.AddDays(-30).Date <= temp_dt.Date)
                     {
-                        sum_cons += reader.GetDouble(reader.GetOrdinal("consumption"));
-                        sum_urt += reader.GetDouble(reader.GetOrdinal("URT"));
-                        sum_multi_urt_cons += (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
-                        last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
-                        i++;
+                        rec_WT.TurbinID = temp_TurbinID;
+                        rec_WT.StationID = temp_StationID;
+                        rec_WT.URT = (sum_multi_urt_cons / sum_cons);
+                        rec_WT.Consumption = sum_cons;
+                        rec_WT.PeriodValue = i;
+                        
+                        // ✅ ДОБАВЛЕНО
+                        rec_WT.NominalURT = count > 0 ? sum_nominal_urt / count : 0;
                     }
-                    else
-                    {
-                        if (DateTime.Now.AddDays(-30).Date <= temp_dt.Date)
-                        {
-                            rec_WT.TurbinID = temp_TurbinID;
-                            rec_WT.StationID = temp_StationID;
-                            rec_WT.URT = (sum_multi_urt_cons / sum_cons);
-                            rec_WT.Consumption = sum_cons;
-                            rec_WT.PeriodValue = i;
-                        }
-                        rec_WT.PeriodType = PeriodType.Month;
-                        weekTurbins.Add(rec_WT);
-                        rec_WT = new Turbin();
-                        i = 1;
-                        temp_StationID = reader.GetInt32(reader.GetOrdinal("StationID"));
-                        temp_TurbinID = reader.GetString(reader.GetOrdinal("TurbinID"));
-                        sum_cons = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        sum_urt = reader.GetDouble(reader.GetOrdinal("URT"));
-                        sum_multi_urt_cons = (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
-                        last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
-                    }
+                    rec_WT.PeriodType = PeriodType.Month;
+                    weekTurbins.Add(rec_WT);
+                    rec_WT = new Turbin();
+                    i = 1;
+                    count = 1; // ✅ ДОБАВЛЕНО
+                    temp_StationID = reader.GetInt32(reader.GetOrdinal("StationID"));
+                    temp_TurbinID = reader.GetString(reader.GetOrdinal("TurbinID"));
+                    sum_cons = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    sum_urt = reader.GetDouble(reader.GetOrdinal("URT"));
+                    sum_multi_urt_cons = (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
+                    last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
+                    
+                    // ✅ ДОБАВЛЕНО
+                    sum_nominal_urt = reader.GetDouble(reader.GetOrdinal("nominal_urt"));
                 }
             }
         }
-        weekTurbins.RemoveAt(index);
     }
-    public static void GetRelevantYearData_TA(Turbin rec_WT, List<Turbin> weekTurbins, string select_TA, NpgsqlConnection connection1, SqlConnection connection)
+    weekTurbins.RemoveAt(index);
+}
+
+public static void GetRelevantYearData_TA(Turbin rec_WT, List<Turbin> weekTurbins, string select_TA, NpgsqlConnection connection1, SqlConnection connection)
+{
+    int index = weekTurbins.Count();
+    int temp_StationID = 0;
+    string temp_TurbinID = "0";
+    double sum_cons = 0;
+    double sum_urt = 0;
+    double sum_multi_urt_cons = 0;
+    double last_consumption = 0;
+    DateTime temp_dt = new DateTime(2000, 1, 1);
+    
+    // ✅ ДОБАВЛЕНО
+    double sum_nominal_urt = 0;
+    int count = 0;
+    
+    using (var command = new NpgsqlCommand(select_TA, connection1))
     {
-        int index = weekTurbins.Count();
-        int temp_StationID = 0;
-        string temp_TurbinID = "0";
-        double sum_cons = 0;
-        double sum_urt = 0;
-        double sum_multi_urt_cons = 0;
-        double last_consumption = 0;
-        DateTime temp_dt = new DateTime(2000, 1, 1);
-        using (var command = new NpgsqlCommand(select_TA, connection1))
+        using (var reader = command.ExecuteReader())
         {
-            using (var reader = command.ExecuteReader())
-            {int i = 1;
-                while (reader.Read())
+            int i = 1;
+            while (reader.Read())
+            {
+                if (temp_StationID == reader.GetInt32(reader.GetOrdinal("StationID")) && temp_TurbinID == reader.GetString(reader.GetOrdinal("TurbinID")))
                 {
-                    if (temp_StationID == reader.GetInt32(reader.GetOrdinal("StationID")) && temp_TurbinID == reader.GetString(reader.GetOrdinal("TurbinID")))
+                    sum_cons += reader.GetDouble(reader.GetOrdinal("consumption"));
+                    sum_urt += reader.GetDouble(reader.GetOrdinal("URT"));
+                    sum_multi_urt_cons += (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
+                    last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
+                    
+                    // ✅ ДОБАВЛЕНО
+                    sum_nominal_urt += reader.GetDouble(reader.GetOrdinal("nominal_urt"));
+                    count++;
+                    i++;
+                }
+                else
+                {
+                    if (DateTime.Now.AddDays(-365).Date <= temp_dt.Date)
                     {
-                        sum_cons += reader.GetDouble(reader.GetOrdinal("consumption"));
-                        sum_urt += reader.GetDouble(reader.GetOrdinal("URT"));
-                        sum_multi_urt_cons += (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
-                        last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
-                        i++;
+                        rec_WT.TurbinID = temp_TurbinID;
+                        rec_WT.StationID = temp_StationID;
+                        rec_WT.URT = (sum_multi_urt_cons / sum_cons);
+                        rec_WT.Consumption = (sum_cons);
+                        rec_WT.PeriodValue = i;
+                        
+                        // ✅ ДОБАВЛЕНО
+                        rec_WT.NominalURT = count > 0 ? sum_nominal_urt / count : 0;
                     }
-                    else
-                    {
-                        if (DateTime.Now.AddDays(-365).Date <= temp_dt.Date)
-                        {
-                            rec_WT.TurbinID = temp_TurbinID;
-                            rec_WT.StationID = temp_StationID;
-                            rec_WT.URT = (sum_multi_urt_cons / sum_cons);
-                            rec_WT.Consumption = (sum_cons);
-                            rec_WT.PeriodValue = i;
-                        }
-                        rec_WT.PeriodType = PeriodType.Year;
-                        weekTurbins.Add(rec_WT);
-                        rec_WT = new Turbin();
-                        i = 1;
-                        temp_StationID = reader.GetInt32(reader.GetOrdinal("StationID"));
-                        temp_TurbinID = reader.GetString(reader.GetOrdinal("TurbinID"));
-                        sum_cons = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        sum_urt = reader.GetDouble(reader.GetOrdinal("URT"));
-                        sum_multi_urt_cons = (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
-                        last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
-                        temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
-                    }
+                    rec_WT.PeriodType = PeriodType.Year;
+                    weekTurbins.Add(rec_WT);
+                    rec_WT = new Turbin();
+                    i = 1;
+                    count = 1; // ✅ ДОБАВЛЕНО
+                    temp_StationID = reader.GetInt32(reader.GetOrdinal("StationID"));
+                    temp_TurbinID = reader.GetString(reader.GetOrdinal("TurbinID"));
+                    sum_cons = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    sum_urt = reader.GetDouble(reader.GetOrdinal("URT"));
+                    sum_multi_urt_cons = (reader.GetDouble(reader.GetOrdinal("URT")) + reader.GetDouble(reader.GetOrdinal("variation"))) * reader.GetDouble(reader.GetOrdinal("consumption"));
+                    last_consumption = reader.GetDouble(reader.GetOrdinal("consumption"));
+                    temp_dt = reader.GetDateTime(reader.GetOrdinal("date"));
+                    
+                    // ✅ ДОБАВЛЕНО
+                    sum_nominal_urt = reader.GetDouble(reader.GetOrdinal("nominal_urt"));
                 }
             }
         }
-        weekTurbins.RemoveAt(index);
     }
+    weekTurbins.RemoveAt(index);
+}
+
 
     public static void GetRelevantWeekData_KA(Boiler rec_WB, List<Boiler> weekBoilers, string select_KA, NpgsqlConnection connection1, SqlConnection connection)
         {
@@ -498,32 +554,37 @@ public static void GenerateDB_TA(TurbinRecord rec_TA, Dictionary<int, List<strin
             weekBoilers.RemoveAt(index);
         }
     public static void InsertFinalData_TA(string truncate_week_TA, string insertQuerry_week_TA, List<Turbin> weekTurbins, NpgsqlConnection connection1)
+{
+    using (var trunc = new NpgsqlCommand(truncate_week_TA, connection1))
     {
-        using (var trunc = new NpgsqlCommand(truncate_week_TA, connection1))
+        trunc.ExecuteNonQuery();
+    }
+    foreach (var WT in weekTurbins)
+    {
+        using (var week_ins = new NpgsqlCommand(insertQuerry_week_TA, connection1))
         {
-            trunc.ExecuteNonQuery();
-        }
-        foreach (var WT in weekTurbins)
-        {
-            using (var week_ins = new NpgsqlCommand(insertQuerry_week_TA, connection1))
+            try
             {
-                try
-                {
-                    week_ins.Parameters.AddWithValue("@TurbinID", WT.TurbinID);
-                    week_ins.Parameters.AddWithValue("@StationID", WT.StationID);
-                    week_ins.Parameters.AddWithValue("@URT", WT.URT);
-                    week_ins.Parameters.AddWithValue("@Consumption", WT.Consumption);
-                    week_ins.Parameters.AddWithValue("@PeriodType", (int)WT.PeriodType);
-                    week_ins.Parameters.AddWithValue("@PeriodValue", WT.PeriodValue);
-                    week_ins.ExecuteNonQuery();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(WT.TurbinID);
-                }
+                week_ins.Parameters.AddWithValue("@TurbinID", WT.TurbinID);
+                week_ins.Parameters.AddWithValue("@StationID", WT.StationID);
+                week_ins.Parameters.AddWithValue("@URT", WT.URT);
+                week_ins.Parameters.AddWithValue("@Consumption", WT.Consumption);
+                week_ins.Parameters.AddWithValue("@PeriodType", (int)WT.PeriodType);
+                week_ins.Parameters.AddWithValue("@PeriodValue", WT.PeriodValue);
+                
+                // ✅ ДОБАВЛЕНО
+                week_ins.Parameters.AddWithValue("@NominalURT", WT.NominalURT);
+                
+                week_ins.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка для турбины {WT.TurbinID}: {ex.Message}");
             }
         }
     }
+}
+
 
     public static void InsertFinalData_KA(string truncate_week_KA, string insertQuerry_week_KA, List<Boiler> weekBoilers, NpgsqlConnection connection1)
     {

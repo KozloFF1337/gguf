@@ -19,16 +19,18 @@ public static class SQL_config
     VALUES(@BoilerID, @StationID, @KPD, @Production, @Date, @Consumption, @Hours, @Temp_fact, @Temp_nominal, @Temp_koef, @Humidity, @Ash)  
     ON CONFLICT (BoilerID, stationID, date) DO NOTHING;";
 
+    // ✅ ИЗМЕНЕНО: Добавлено поле nominal_urt
     public static string insertQuerry_TA = @"
-    INSERT INTO raw_turbins(TurbinID, stationID, URT, consumption, date, hours, variation)
-    VALUES(@TurbinID, @StationID, @URT, @Consumption, @Date, @Hours, @Variation)  
+    INSERT INTO raw_turbins(TurbinID, stationID, URT, consumption, date, hours, variation, nominal_urt)
+    VALUES(@TurbinID, @StationID, @URT, @Consumption, @Date, @Hours, @Variation, @NominalURT)  
     ON CONFLICT (TurbinID, stationID, date) DO NOTHING;";
 
     public static string insertQuerry_week_KA = @"
     INSERT INTO ""Boilers""(""BoilerID"", ""StationID"", ""KPD"", ""Production"", ""Consumption"",""PeriodType"",""PeriodValue"")
     VALUES (@BoilerID, @StationID, @KPD, @Production, @Consumption, @PeriodType, @PeriodValue);";
 
+    // ✅ ИЗМЕНЕНО: Добавлено поле NominalURT
     public static string insertQuerry_week_TA = @"
-    INSERT INTO ""Turbins""(""TurbinID"", ""StationID"", ""URT"", ""Consumption"",""PeriodType"",""PeriodValue"")
-    VALUES(@TurbinID, @StationID, @URT, @Consumption, @PeriodType, @PeriodValue);";
+    INSERT INTO ""Turbins""(""TurbinID"", ""StationID"", ""URT"", ""Consumption"",""PeriodType"",""PeriodValue"", ""NominalURT"")
+    VALUES(@TurbinID, @StationID, @URT, @Consumption, @PeriodType, @PeriodValue, @NominalURT);";
 }

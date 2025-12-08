@@ -1,3 +1,4 @@
+
 public struct TurbinRecord()
 {
     public string TurbinID;
@@ -7,4 +8,5 @@ public struct TurbinRecord()
     public double Consumption;
     public double Hours;
     public double variation;
+    public double NominalURT;  // ДОБАВЛЕНО
 };

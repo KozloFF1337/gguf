@@ -9,5 +9,8 @@ namespace Altair.Models
         public int PeriodValue { get; set; }
         public double URT { get; set; }
         public double Consumption { get; set; }
+        
+        // ✅ ДОБАВЛЕНО
+        public double NominalURT { get; set; }
     }
 }
