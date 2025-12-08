@@ -1,83 +1,74 @@
-@RenderBody()
-
-<!-- ВСТАВЬ ЭТОТ КОД ПЕРЕД @RenderBody() -->
-<div class="dev-warning-banner">
-    <div class="warning-content">
-        <span class="warning-icon">⚠️</span>
-        <span class="warning-text">
-            <strong>ВНИМАНИЕ:</strong> Проект находится в стадии разработки. Данные не прошли верификацию и могут содержать ошибки.
-        </span>
-    </div>
-</div>
-
-@RenderBody()
-
-
-/* Плашка предупреждения */
-.dev-warning-banner {
-    width: 100%;
-    background: linear-gradient(135deg, #ff6b6b 0%, #fd817e 100%);
-    color: white;
-    position: fixed;
-    top: 60px; /* Сразу после header, который 60px высотой */
-    z-index: 999;
-    box-shadow: 0 4px 12px rgba(253, 129, 126, 0.4);
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-    animation: slideDown 0.4s ease-out;
-}
-
-.warning-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 14px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-}
-
-.warning-icon {
-    font-size: 24px;
-    animation: pulse 2s infinite;
-}
-
-.warning-text {
-    font-family: 'Montserrat', Arial, sans-serif;
-    font-size: 15px;
-    font-weight: 500;
-    letter-spacing: 0.3px;
-    line-height: 1.4;
-}
-
-.warning-text strong {
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-/* Анимации */
-@keyframes slideDown {
-    from {
-        transform: translateY(-100%);
-        opacity: 0;
+public static void GenerateDB_TA(TurbinRecord rec_TA, Dictionary<int, List<string>> matching_dict_TA, string insertQuerry_TA, string format, NpgsqlConnection connection1, SqlConnection connection)
+{
+    foreach (var dic in matching_dict_TA)
+    {
+        foreach (string code in dic.Value)
+        {
+            string sql_start = $"exec dbo.p_GetParamValuePivot '{Correct(dic.Key)}','Основная', ";
+            string sql_end = ", '2025-01-01 00:00:00',  '2025-12-31 23:00:00',  'Сутки';";
+            
+            rec_TA.StationID = short.Parse(code.Substring(11, 2));
+            rec_TA.TurbinID = code.Substring(1, 2) + ((code[9] == '0') ? "" : code[9].ToString());
+            rec_TA.TurbinID = rec_TA.TurbinID.Replace("A", "А").Replace("B", "Б");
+            
+            string a = sql_start + code + sql_end;
+            SqlCommand command = new SqlCommand(a, connection);
+            SqlDataReader reader = command.ExecuteReader();
+            
+            while (reader.Read())
+            {
+                try
+                {
+                    rec_TA.Date = DateTime.ParseExact(reader[0].ToString().Substring(0, 10), format, CultureInfo.InvariantCulture);
+                    rec_TA.URT = TryParseDouble(reader[1]);
+                    rec_TA.Consumption = TryParseDouble(reader[2]);
+                    rec_TA.Hours = int.TryParse(reader[3]?.ToString(), out var hours) ? hours : 0;
+                    rec_TA.variation = TryParseDouble(reader[4]);
+                    
+                    // ✅ ИЗМЕНЕНО: Проверяем существование 6-го поля (индекс 5)
+                    if (reader.FieldCount > 5)
+                    {
+                        rec_TA.NominalURT = TryParseDouble(reader[5]);
+                    }
+                    else
+                    {
+                        rec_TA.NominalURT = 0;
+                    }
+                    
+                    using (var insertCommand = new NpgsqlCommand(insertQuerry_TA, connection1))
+                    {
+                        insertCommand.Parameters.AddWithValue("@TurbinID", rec_TA.TurbinID);
+                        insertCommand.Parameters.AddWithValue("@StationID", rec_TA.StationID);
+                        insertCommand.Parameters.AddWithValue("@URT", rec_TA.URT);
+                        insertCommand.Parameters.AddWithValue("@Date", rec_TA.Date);
+                        insertCommand.Parameters.AddWithValue("@Consumption", rec_TA.Consumption);
+                        insertCommand.Parameters.AddWithValue("@Hours", rec_TA.Hours);
+                        insertCommand.Parameters.AddWithValue("@Variation", rec_TA.variation);
+                        insertCommand.Parameters.AddWithValue("@NominalURT", rec_TA.NominalURT);
+                        
+                        insertCommand.ExecuteNonQuery();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка при обработке строки: {ex.Message}");
+                }
+                    switch (rec_TA.StationID)
+                    {
+                        case 25:
+                            switch (rec_TA.TurbinID)
+                            {
+                                case "01А":
+                                    break;
+                                default:
+                                    break;
+                            }
+                            break;
+                        default:
+                            break;
+                    } 
+            }
+            reader.Close();
+        }
     }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.15);
-    }
-}
-
-/* Корректировка отступа для контента */
-.container {
-    min-height: calc(90vh);
-    padding-top: 112px; /* 60px header + ~52px warning banner */
 }
