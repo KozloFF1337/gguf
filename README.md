@@ -124,4 +124,3 @@ document.addEventListener('click', function(e) {
         d3.selectAll('input[name="station"]').property('checked', false);
     }
 });
-
