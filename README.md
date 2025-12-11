@@ -918,143 +918,431 @@
         // Сортируем рейтинг по значению
         ratings.sort((a, b) => b.rating - a.rating);
 
-        // ============ МОИ ИЗМЕНЕНИЯ НАЧИНАЮТСЯ ЗДЕСЬ ============
-
-        // Получаем список всех ID станций из объекта stations
-        const allStationIDs = Object.keys(stations);
-
-        // Находим станции, которых нет в рейтинге
-        const stationsWithRating = ratings.map(r => r.StationID);
-        const stationsWithoutData = allStationIDs.filter(id => !stationsWithRating.includes(id));
-
-        // Добавляем станции без данных в массив рейтинга с rating = null
-        stationsWithoutData.forEach(stationID => {
-            ratings.push({
-                StationID: stationID,
-                rating: null
-            });
-        });
-
-        // Сортируем: сначала станции с рейтингом (по убыванию), затем без рейтинга
-        ratings.sort((a, b) => {
-            if (a.rating === null && b.rating === null) return 0;
-            if (a.rating === null) return 1;
-            if (b.rating === null) return -1;
-            return b.rating - a.rating;
-        });
-
         // Выбираем контейнер рейтинга
         const ratingContainer = d3.select('.rating-container');
-
         function selectColorForRating(rt) {
-            if (rt < 0) return 'score-value-3'; // Красный
-            if (rt >= 0) return 'score-value-4'; // Светло-зеленый
-            return 'score-value-0'; // Серый по умолчанию
-        }
+                    if (rt < 0) return 'score-value-3'; // Красный
+                    if (rt >= 0 ) return 'score-value-4'; // Светло-зеленый
+                    return 'score-value-0'; // Серый по умолчанию
+                }
 
         // Обновленные функции highlightStation и resetHighlight
         function highlightStation(StationID) {
-            // Затемняем все элементы и текст
-            d3.selectAll(".node rect")
-                .style("opacity", 0.3);
-            d3.selectAll(".node text")
-                .style("opacity", 0.3);
+        // Затемняем все элементы и текст
+        d3.selectAll(".node rect")
+        .style("opacity", 0.3);
+        d3.selectAll(".node text")
+        .style("opacity", 0.3);
 
-            // Подсвечиваем элементы выбранной станции
-            d3.selectAll(".node")
-                .filter(d => d.data && d.data.station == StationID)
-                .select("rect")
-                .style("opacity", 1);
+        // Подсвечиваем элементы выбранной станции
+        d3.selectAll(".node")
+            .filter(d => d.data && d.data.station == StationID)
+            .select("rect")
+            .style("opacity", 1);
 
-            d3.selectAll(".node")
-                .filter(d => d.data && d.data.station == StationID)
-                .selectAll("text")
-                .style("opacity", 1);
+        d3.selectAll(".node")
+            .filter(d => d.data && d.data.station == StationID)
+            .selectAll("text")
+            .style("opacity", 1);
+
         }
 
         function resetHighlight() {
-            // Возвращаем нормальную прозрачность всем элементам
-            d3.selectAll(".node rect, .node text")
-                .style("opacity", 1);
+        // Возвращаем нормальную прозрачность всем элементам
+        d3.selectAll(".node rect, .node text")
+        .style("opacity", 1);
         }
-
-        // Переменная для отслеживания текущей выбранной станции
-        let currentSelectedStation = null;
-
-        // Генерируем карточки рейтинга
+        // Генерируем карточки рейтинга с радиокнопками
         ratings.forEach((rating, index) => {
             const cardDiv = ratingContainer.append('div')
                 .attr('class', 'rating-card');
-            
             // Левая часть - информация о станции
             const ratingInfo = cardDiv.append('div')
                 .attr('class', 'rating-info')
                 .on('click', function() {
-                    if (stationLinks[rating.StationID]) {
-                        window.open(stationLinks[rating.StationID], '_blank');
-                    }
+                    window.open(stationLinks[rating.StationID], '_blank');
                 });
-            
-            // Только для станций с данными показываем номер места
-            if (rating.rating !== null) {
-                ratingInfo.append('span')
-                    .attr('class', 'rank-number')
-                    .text(index + 1 + '.');
-            }
-            
+            ratingInfo.append('span')
+                .attr('class', 'rank-number')
+                .text(index + 1 + '.');
             ratingInfo.append('span')
                 .attr('class', 'user-name')
                 .text(stations[rating.StationID]);
-            
-            // Только для станций с данными показываем рейтинг
-            if (rating.rating !== null) {
-                ratingInfo.append('span')
-                    .attr('class', selectColorForRating(rating.rating))
-                    .text(`${rating.rating.toFixed(2)}%`);
-                
-                // Правая часть - радиокнопка (только для станций с данными)
-                const radioDiv = cardDiv.append('div')
-                    .attr('class', 'radio-btn')
-                    .on('click', function(e) {
-                        e.stopPropagation();
-                        
-                        const checkbox = d3.select(this).select('input');
-                        const isCurrentlyChecked = checkbox.property('checked');
-                        
-                        // Снимаем выделение со всех
-                        d3.selectAll('input[name="station"]').property('checked', false);
-                        
-                        // Если кликнули на уже выбранную станцию - снимаем выделение
-                        if (isCurrentlyChecked || currentSelectedStation === rating.StationID) {
-                            resetHighlight();
-                            currentSelectedStation = null;
-                        } else {
-                            // Иначе выделяем новую станцию
-                            checkbox.property('checked', true);
-                            highlightStation(rating.StationID);
-                            currentSelectedStation = rating.StationID;
-                        }
-                    });
-                
-                radioDiv.append('input')
-                    .attr('type', 'radio')
-                    .attr('name', 'station')
-                    .attr('id', `station-${rating.StationID}`);
-            } else {
-                // Для станций без данных оставляем курсор pointer если есть ссылка
-                if (!stationLinks[rating.StationID]) {
-                    cardDiv.style('cursor', 'default');
-                }
-            }
-        });
-
+            ratingInfo.append('span')
+                .attr('class', selectColorForRating(rating.rating))
+                .text(`${rating.rating.toFixed(2)}%`);
+            // Правая часть - радиокнопка
+            const radioDiv = cardDiv.append('div')
+                .attr('class', 'radio-btn')
+                .on('click', function(e) {
+                    e.stopPropagation();
+                    highlightStation(rating.StationID);
+                    // Помечаем выбранную радиокнопку
+                    d3.selectAll('input[name="station"]').property('checked', false);
+                    d3.select(this).select('input').property('checked', true);
+                });
+            radioDiv.append('input')
+                .attr('type', 'radio')
+                .attr('name', 'station')
+                .attr('id', `station-${rating.StationID}`);
+        }); 
         // Сбрасываем выделение при клике вне карточек
         document.addEventListener('click', function(e) {
             if (!e.target.closest('.rating-card')) {
                 resetHighlight();
                 d3.selectAll('input[name="station"]').property('checked', false);
-                currentSelectedStation = null;
             }
         });
+
+        // Общая ширина окна
+        const totalWidth = document.body.clientWidth; // Ограничиваем ширину
+        const graphWidth = totalWidth - (totalWidth / 6.8) ; // Ширина одного графика (оставляем пространство между графиками)
+        const height = window.innerHeight * 0.85;
+
+        
+        
+        const tooltip = d3.select("#tooltip");
+
+        // Функция для рисования одного treemap
+            function drawTreemap_turbin(containerSelector, data) {
+                const svg = d3.select(containerSelector).append("svg")
+                            .attr("width", graphWidth)
+                            .attr("height", height);
+
+                // Hierarchy и обработка treemap
+                const root = d3.hierarchy(data)
+                            .sum(d => d.size)
+                            .sort((a, b) => b.value - a.value);
+
+                d3.treemap()
+                .size([graphWidth, height])
+                .padding(2)
+                (root);
+
+                // Создаем группы для всех узлов
+                const cell = svg.selectAll(".node")
+                                .data(root.leaves())
+                                .enter().append("g")
+                                .attr("transform", d => `translate(${d.x0}, ${d.y0})`)
+                                .classed("node", true);
+
+                // Прямоугольники
+                cell.append("rect")
+                .attr("width", d => d.x1 - d.x0)
+                .attr("height", d => d.y1 - d.y0)
+                .attr("class", "node-rect")
+                .attr("fill", d => selectColorForURT(d.data.urt_percent !== undefined ? d.data.urt_percent : 100))
+                .on("mouseenter", showTooltip) // Показываем подсказку при наведении
+                .on("mousemove", moveTooltip) // Обновляем позицию подсказки
+                .on("mouseleave", hideTooltip); // Скрываем подсказку при уходе мыши
+
+                cell.filter(d => (d.x1 - d.x0) >= 38 && (d.y1 - d.y0) >= 40) // Только если ширина достаточна
+                .each(function(d) {
+                    const g = d3.select(this);
+                    const rectWidth = d.x1 - d.x0; // Ширина прямоугольника
+                    const rectHeight = d.y1 - d.y0; // Высота прямоугольника
+                    const textContent = `${stations[d.data.station]} ТА${d.data.turbin} ${d.data.urt_percent.toFixed(2)}%`;
+
+                    // Вычислим оптимальное количество символов в строке
+                    let fontSize = 16; // Начальный размер шрифта
+                    let maxCharsPerLine = Math.floor(rectWidth / fontSize); // Максимальное количество символов в строке
+                    let lines = wrapText(textContent, maxCharsPerLine);
+                    let reducedForWidth = false; // Флаг для отслеживания уменьшения из-за ширины
+
+                    // Уменьшаем шрифт или количество символов, пока текст или отдельные слова не поместятся в прямоугольник
+                    while (fontSize > 6 && maxCharsPerLine > 1) {
+                        const totalHeight = lines.length * (fontSize + 4); // Общая высота текста с учетом межстрочного интервала
+                        const wordTooWide = lines.some(line => {
+                            const words = line.split(' ');
+                            return words.some(word => word.length * fontSize > rectWidth);
+                        });
+
+                        if (totalHeight <= rectHeight && !wordTooWide) {
+                            break; // Если текст и слова помещаются, выходим из цикла
+                        }
+
+                        if (wordTooWide && fontSize > 6) {
+                            fontSize--; // Уменьшаем размер шрифта, чтобы слово поместилось
+                            reducedForWidth = true; // Отмечаем, что уменьшили из-за ширины
+                        } else if (maxCharsPerLine > 1) {
+                            maxCharsPerLine--; // Уменьшаем количество символов в строке
+                        } else {
+                            break; // Если достигнуты минимальные значения, выходим из цикла
+                        }
+
+                        lines = wrapText(textContent, maxCharsPerLine); // Пересчитываем строки
+                    }
+
+                    // Если высота меньше 60, уменьшаем шрифт на 2 пункта
+                    if (rectHeight < 60 && fontSize > 9) {
+                        fontSize -= 4;
+                    }
+
+                    // Если шрифт был уменьшен из-за ширины, увеличиваем его на 2 пункта
+                    if (reducedForWidth && fontSize < 16) {
+                        fontSize += 2;
+                    }
+
+                    // Центруем текст по вертикали
+                    const lineHeight = fontSize + 4; // Средняя высота строки
+                    const numLines = lines.length;
+                    const yCenterOffset = ((numLines * lineHeight) - rectHeight) / 2;
+
+                    // Добавляем текстовые строки
+                    lines.forEach((line, index) => {
+                        g.append("text")
+                            .attr("class", "centered-text node-text")
+                            .attr("x", (d.x1 - d.x0) / 2) // Х-центр блока
+                            .attr("y", (index * lineHeight) - yCenterOffset + lineHeight / 2) // Центрирование по вертикали
+                            .style("font-size", `${fontSize}px`) // Размер шрифта
+                            .style("font-family", "Arial") // Шрифт
+                            .style("font-weight", "bold") // Жирный шрифт
+                            .style("fill", "#dddddd") // Белый цвет текста
+                            .style("text-anchor", "middle") // Выравнивание по центру
+                            .text(line);
+                    });
+                });
+
+            // Вспомогательная функция для разрыва строки
+            function wrapText(text, maxCharsPerLine) {
+                const words = text.split(' ');
+                const wrappedLines = [];
+                let currentLine = '';
+
+                words.forEach(word => {
+                    if ((currentLine + word).length > maxCharsPerLine && currentLine !== '') {
+                        wrappedLines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine += word + ' ';
+                    }
+                });
+
+                if (currentLine.trim()) {
+                    wrappedLines.push(currentLine.trim());
+                }
+
+                return wrappedLines;
+            }
+
+                    // Переменная таймера для скрытия подсказки
+                    let hideTimeout;
+
+                    // Функции обработки подсказки
+                    function showTooltip(event, d) {
+                        const content = `
+                            Станция: ${stations[d.data.station]}<br/>
+                            Турбина: ${d.data.turbin}<br/>
+                            УРТ: ${d.data.urt.toFixed(2)}<br/>
+                            Норма УРТ: ${d.data.urt_percent_normal.toFixed(2)}<br/>
+                            Расход тепла: ${d.data.size.toFixed(2)}
+                        `;
+                        
+                        clearTimeout(hideTimeout);
+
+                        // Определяем расстояние от нижнего края окна
+                        const bottomSpace = window.innerHeight - event.pageY;
+                            tooltip.html(content)
+                                .style("opacity", 1)
+                                .style("top", event.pageY - tooltip.node().offsetHeight + "px")
+                                .style("left", event.pageX - 150 + "px");
+                    }
+
+                    function moveTooltip(event) {
+                        // Здесь логика перемещения аналогична showTooltip,
+                        // проверяя свободное пространство и меняя положение
+                        const bottomSpace = window.innerHeight - event.pageY;
+
+                            tooltip.style("top", event.pageY - tooltip.node().offsetHeight + "px");
+                        tooltip.style("left", event.pageX - 150 + "px");
+                    }
+
+                    function hideTooltip() {
+                        hideTimeout = setTimeout(() => {
+                            tooltip.style("opacity", 0);
+                        }, 50);
+                    }
+                    // Функция выбора цвета в зависимости от KPD
+                    function selectColorForURT(urtValue) {
+                        if (urtValue > 4) return '#8B0000'; // Красный
+                        if (urtValue >= 2 && urtValue < 4) return '#BF0000'; // Красный
+                        if (urtValue >= 0 && urtValue < 2) return '#c5172c'; // Оранжевый
+                        if (urtValue >= -2 && urtValue < 0) return '#009F00'; // Светло-зеленый
+                        if (urtValue < -2) return '#006400'; // Темно-зеленый
+                        return '#DDDDDD'; // Серый по умолчанию
+                    }
+                }
+
+            function drawTreemap_boiler(containerSelector, data) {
+            const svg = d3.select(containerSelector).append("svg")
+                           .attr("width", graphWidth)
+                           .attr("height", height);
+
+            // Hierarchy и обработка treemap
+            const root = d3.hierarchy(data)
+                           .sum(d => d.size)
+                           .sort((a, b) => b.value - a.value);
+
+            d3.treemap()
+               .size([graphWidth, height])
+               .padding(2)
+               (root);
+
+            // Создаем группы для всех узлов
+            const cell = svg.selectAll(".node")
+                             .data(root.leaves())
+                             .enter().append("g")
+                             .attr("transform", d => `translate(${d.x0}, ${d.y0})`)
+                             .classed("node", true);
+            // Прямоугольники
+            cell.append("rect")
+               .attr("width", d => d.x1 - d.x0)
+               .attr("height", d => d.y1 - d.y0)
+               .attr("class", "node-rect")
+               .attr("fill", d => selectColorForKPD(d.data.kpd_percent))
+               .on("mouseenter", showTooltip) // Показываем подсказку при наведении
+               .on("mousemove", moveTooltip) // Обновляем позицию подсказки
+               .on("mouseleave", hideTooltip); // Скрываем подсказку при уходе мыши
+            // Добавляем текст, соблюдая ограничения и переносы
+            cell.filter(d => (d.x1 - d.x0) >= 38 && (d.y1 - d.y0) >= 40) // Только если ширина достаточна
+                .each(function(d) {
+                    const g = d3.select(this);
+                    const rectWidth = d.x1 - d.x0; // Ширина прямоугольника
+                    const rectHeight = d.y1 - d.y0; // Высота прямоугольника
+                    const textContent = `${stations[d.data.station]} КА${d.data.boiler} ${d.data.kpd_percent.toFixed(2)}%`;
+
+                    // Вычислим оптимальное количество символов в строке
+                    let fontSize = 16; // Начальный размер шрифта
+                    let maxCharsPerLine = Math.floor(rectWidth / fontSize); // Максимальное количество символов в строке
+                    let lines = wrapText(textContent, maxCharsPerLine);
+                    let reducedForWidth = false; // Флаг для отслеживания уменьшения из-за ширины
+
+                    // Уменьшаем шрифт или количество символов, пока текст или отдельные слова не поместятся в прямоугольник
+                    while (fontSize > 6 && maxCharsPerLine > 1) {
+                        const totalHeight = lines.length * (fontSize + 4); // Общая высота текста с учетом межстрочного интервала
+                        const wordTooWide = lines.some(line => {
+                            const words = line.split(' ');
+                            return words.some(word => word.length * fontSize > rectWidth);
+                        });
+
+                        if (totalHeight <= rectHeight && !wordTooWide) {
+                            break; // Если текст и слова помещаются, выходим из цикла
+                        }
+
+                        if (wordTooWide && fontSize > 6) {
+                            fontSize--; // Уменьшаем размер шрифта, чтобы слово поместилось
+                            reducedForWidth = true; // Отмечаем, что уменьшили из-за ширины
+                        } else if (maxCharsPerLine > 1) {
+                            maxCharsPerLine--; // Уменьшаем количество символов в строке
+                        } else {
+                            break; // Если достигнуты минимальные значения, выходим из цикла
+                        }
+
+                        lines = wrapText(textContent, maxCharsPerLine); // Пересчитываем строки
+                    }
+
+                    // Если высота меньше 60, уменьшаем шрифт на 2 пункта
+                    if (rectHeight < 60 && fontSize > 9) {
+                        fontSize -= 4;
+                    }
+
+                    // Если шрифт был уменьшен из-за ширины, увеличиваем его на 2 пункта
+                    if (reducedForWidth && fontSize < 16) {
+                        fontSize += 2;
+                    }
+
+                    // Центруем текст по вертикали
+                    const lineHeight = fontSize + 4; // Средняя высота строки
+                    const numLines = lines.length;
+                    const yCenterOffset = ((numLines * lineHeight) - rectHeight) / 2;
+
+                    // Добавляем текстовые строки
+                    lines.forEach((line, index) => {
+                        g.append("text")
+                            .attr("class", "centered-text node-text")
+                            .attr("x", (d.x1 - d.x0) / 2) // Х-центр блока
+                            .attr("y", (index * lineHeight) - yCenterOffset + lineHeight / 2) // Центрирование по вертикали
+                            .style("font-size", `${fontSize}px`) // Размер шрифта
+                            .style("font-family", "Arial") // Шрифт
+                            .style("font-weight", "bold") // Жирный шрифт
+                            .style("fill", "#dddddd") // Белый цвет текста
+                            .style("text-anchor", "middle") // Выравнивание по центру
+                            .text(line);
+                    });
+                });
+
+            // Вспомогательная функция для разрыва строки
+            function wrapText(text, maxCharsPerLine) {
+                const words = text.split(' ');
+                const wrappedLines = [];
+                let currentLine = '';
+
+                words.forEach(word => {
+                    if ((currentLine + word).length > maxCharsPerLine && currentLine !== '') {
+                        wrappedLines.push(currentLine.trim());
+                        currentLine = word + ' ';
+                    } else {
+                        currentLine += word + ' ';
+                    }
+                });
+
+                if (currentLine.trim()) {
+                    wrappedLines.push(currentLine.trim());
+                }
+
+                return wrappedLines;
+            }
+            
+                let hideTimeout;
+                            // Функции для всплывающих подсказок
+                function showTooltip(event, d) {
+                    const content = `
+                        Станция: ${stations[d.data.station]}<br/>
+                        Котёл: ${d.data.boiler}<br/>
+                        КПД: ${d.data.kpd.toFixed(2)}<br/>
+                        Норма КПД: ${d.data.kpd_percent_normal.toFixed(2)}<br/>
+                        Выработка тепла: ${d.data.size.toFixed(2)}
+                    `;
+                    clearTimeout(hideTimeout);
+                    tooltip.html(content)
+                        .style("opacity", 1)
+                        .style("top", event.pageY + 10 + "px")
+                        .style("left", event.pageX - 150 + "px");
+                }
+
+                function moveTooltip(event) {
+                    tooltip.style("top", event.pageY + 10 + "px")
+                        .style("left", event.pageX - 150 + "px");
+                }
+
+                function hideTooltip() {
+                    hideTimeout = setTimeout(() => {
+                        tooltip.style("opacity", 0)
+                    },50);
+                }
+                // Функция выбора цвета в зависимости от KPD
+                function selectColorForKPD(kpdValue) {
+                    if (kpdValue < -2) return '#8B0000'; // Красный
+                    if (kpdValue >= -2 && kpdValue < -1) return '#BF0000'; // Красный
+                    if (kpdValue >= -1 && kpdValue < 0) return '#c5172c'; // Оранжевый
+                    if (kpdValue >= 0 && kpdValue < 1) return '#009F00'; // Светло-зеленый
+                    if (kpdValue >= 1) return '#006400'; // Темно-зеленый
+                    return '#DDDDDD'; // Серый по умолчанию
+                }
+            }
+
+        // Отрисовываем левый график
+        drawTreemap_turbin("#treemap-right", hierarchicalData_turbin);
+
+        // Отрисовываем правый график (можно передать тот же или другой набор данных)
+        drawTreemap_boiler("#treemap-left", hierarchicalData_boiler);
+
+        document.getElementById('r_1').addEventListener('click', function () {
+            window.location.href = '@Url.Action("Contacts", "Home")';
+        });
+        document.getElementById('r_2').addEventListener('click', function () {
+            window.location.href = '@Url.Action("Index", "Home")';
+        });
     </script>
+</div>
 </body>
