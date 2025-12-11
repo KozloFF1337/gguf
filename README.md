@@ -17,12 +17,15 @@ const ratings = Object.keys(groupedData).map(key => ({
 // Сортируем рейтинг по значению
 ratings.sort((a, b) => b.rating - a.rating);
 
-// ✅ ИСПРАВЛЕНО: Приводим типы к строкам для корректного сравнения
-const stationsWithData = new Set(ratings.map(r => String(r.StationID)));
-const allStationIDs = Object.keys(stations);
+// ✅ НОВОЕ РЕШЕНИЕ: Создаем объект для быстрого поиска станций с рейтингом
+const ratingsMap = {};
+ratings.forEach(r => {
+    ratingsMap[r.StationID] = true;
+});
 
-const stationsWithoutData = allStationIDs
-    .filter(stationID => !stationsWithData.has(stationID))
+// ✅ Находим станции без данных - берем все станции и исключаем те, что есть в ratingsMap
+const stationsWithoutData = Object.keys(stations)
+    .filter(stationID => !ratingsMap[stationID])
     .map(stationID => ({
         StationID: stationID,
         rating: null,
