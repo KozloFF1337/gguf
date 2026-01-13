@@ -1,37 +1,24 @@
-public async Task<List<DateTime>> GetAvailableDates(PeriodType periodType)
-    {
-        // Получаем все записи и извлекаем уникальные даты на стороне клиента
-        // Используем только поле Date напрямую, без .Date свойства в SQL
-        var turbins = await _context.Set<Turbin>()
-            .Where(t => t.PeriodType == periodType && t.Date != null && t.PeriodValue > 0)
-            .Select(t => t.Date!.Value)
-            .ToListAsync();
+// Функция для вычисления рейтинга
+function calculateRating(group) {
+    const sumUrtPercent = group.reduce((acc, curr) => {
+        const value = curr.urt_percent !== undefined ? curr.urt_percent : 0;
+        return acc + parseFloat(value) * curr.size * -1;
+    }, 0);
 
-        // Нормализуем даты на стороне клиента, убирая время
-        var dates = turbins
-            .Select(d => d.Date) // DateTime.Date - убирает время
-            .Distinct()
-            .OrderByDescending(d => d)
-            .ToList();
+    const sumKpdPercent = group.reduce((acc, curr) => {
+        const value = curr.kpd_percent !== undefined ? curr.kpd_percent : 0;
+        return acc + parseFloat(value) * curr.size;
+    }, 0);
 
-        return dates;
-    }
+    const totalSum = group.reduce((acc, curr) => acc + curr.size, 0);
 
-public async Task<List<DateTime>> GetAvailableDates(PeriodType periodType)
-    {
-        // Получаем все записи и извлекаем уникальные даты на стороне клиента
-        // Используем только поле Date напрямую, без .Date свойства в SQL
-        var boilers = await _context.Set<Boiler>()
-            .Where(b => b.PeriodType == periodType && b.Date != null && b.PeriodValue > 0)
-            .Select(b => b.Date!.Value)
-            .ToListAsync();
+    // Определяем StationID из группы
+    const stationId = group.length > 0 ? group[0].station : null;
+    
+    // Если галочка включена и это ТЭЦ - не умножаем на 2 (только котлы)
+    const isTec = tecStations.includes(parseInt(stationId));
+    const multiplier = (excludeTecTurbinesFlag && isTec) ? 1 : 2;
 
-        // Нормализуем даты на стороне клиента, убирая время
-        var dates = boilers
-            .Select(d => d.Date) // DateTime.Date - убирает время
-            .Distinct()
-            .OrderByDescending(d => d)
-            .ToList();
-
-        return dates;
-    }
+    // Проверка на случай, если totalSum равен 0
+    return totalSum !== 0 ? (sumUrtPercent + sumKpdPercent) * multiplier / totalSum : 0;
+}
