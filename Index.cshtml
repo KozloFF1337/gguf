@@ -1,0 +1,1595 @@
+﻿@using Newtonsoft.Json;
+@using Altair.Services;
+
+@{
+    ViewData["Title"] = "Альтаир Рейтинг";
+}
+
+@model HomeIndexViewModel
+
+<head>
+    <meta charset="UTF-8">
+    <title>Treemap Visualization</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        .rating-container {
+        margin-left: 5px;
+        margin-bottom: 5px;
+        width: calc(12% + 40px);
+        float: left;
+        padding: 10px;
+        padding-top: 0;
+        background-color: #222;
+        color: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        font-family: sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+        zoom: 80%;
+        }
+    body {
+        display: flex;
+        justify-content: space-between;
+        background-color: black;
+        color: white;
+        font-family: sans-serif;
+        }
+    .rating-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #333;
+    border-radius: 5px;
+    box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+    }
+    .rating-info {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+    }
+    .radio-btn {
+        margin-left: 10px;
+        cursor: pointer;
+        transform: scale(1);
+        transform-origin: center;
+    }
+    .radio-btn input {
+        cursor: pointer;
+    }
+    .rating-card:nth-child(even) {
+        background-color: #2a2a2a;
+    }
+    .rank-number {
+        font-weight: bold;
+        color: white;
+        font-size: 16px;
+        margin-right: 10px;
+    }
+    .user-name {
+        font-style: normal;
+        font-size: 16px;
+        color: #dddddd;
+    }
+    .score-value-0 {
+        margin-left: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #5d5d5d;
+    }
+    .score-value-1 {
+        margin-left: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #8B0000;
+    }
+    .score-value-2 {
+        margin-left: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #c5172c;
+    }
+    .score-value-3 {
+        margin-left: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #FF0000;
+    }
+    .score-value-4 {
+        margin-left: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #009F00;
+    }
+    .score-value-5 {
+        margin-left: 4px;
+        font-size: 16px;
+        font-weight: bold;
+        color: #006400;
+    }    
+    .tooltip {
+    position: absolute;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.01s ease-in-out;
+    pointer-events: none;
+    }
+    #sidebar {
+        grid-column-start: span 1;
+        align-self: start;
+        width: calc(10% + 20px);
+        margin-left: 10px;
+    }
+    .rating-card:hover {
+        transform: scale(1.02);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        background-color: #444 !important;
+    }
+
+    .main-container {
+    display: flex;
+    }
+    .graph-container {
+            width: 100%;
+            text-align: center; /* Центрируем содержимое */
+            box-sizing: border-box;
+            margin-left: 4px;
+            }
+
+    h2 {
+            color: #dddddd;
+            font-size: 30px;
+            margin-top: 0;
+            margin-bottom: 4px;
+            display: inline-block; /* Чтобы text-align:center работал правильно */
+            }
+
+    .node rect {
+        stroke-width: 1px;
+        fill-opacity: 1;
+    }
+    
+    text.centered-text {
+        dominant-baseline: middle;
+        pointer-events: none;
+        text-anchor: middle;
+    }
+    select {
+    width: 90px;
+    height: 40px;
+    border: 1px solid #444;
+    border-radius: 5px;
+    background-color: #333;
+    color: #dddddd;
+    font-size: 16px;
+    text-align: center;
+    padding: 0 0px;
+    cursor: pointer;
+    transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    }
+
+    select:hover {
+        background-color: #444;
+        color: #fd817e;
+    }
+
+    select:focus {
+        outline: none;
+        box-shadow: 0 0 5px rgba(253, 129, 126, 0.5);
+    }
+
+.gauges-container{
+  flex: 1 1 auto;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: stretch;   /* карточки растягиваются */
+  padding: 0;                 /* без внутренних отступов */
+  box-sizing: border-box;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+    .bars-container{
+  flex: 1 1 auto;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  margin-top: 16px;
+  margin-left: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;              /* тоже перенос */
+}
+  /* Отдельные карточки для гистограмм */
+
+.bar-card{
+  /* ширина «зажата» между минимумом и максимумом и растёт от окна */
+  width: clamp(280px, 48vw, 640px);
+  flex: 1 1 clamp(280px, 48vw, 640px);
+  background: #222;
+  border-radius:12px;
+  padding:4px 4px 4px;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);
+}
+  .mini-title{
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: #dddddd;
+    text-align: center;
+    letter-spacing: .2px;
+  }
+.gauge-svg,
+.mini-svg{
+  width: 100%;
+  height: auto;                 /* высота следует из viewBox */
+  display: block;
+}
+  /* минималистичная палитра/типографика для баров */
+  .mini-legend{
+  display:flex; gap:14px; justify-content:center; align-items:center;
+  color: #aaaaaa; font:16px/1 sans-serif; margin: 2px 0 8px;
+}
+.sw{ width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:6px; }
+.sw-a{ background:#0078A8; }   /* Серия 1 */
+.sw-b{ background:#EF4156; }   /* Серия 2 */
+
+.sw-boilers{ background:#0078A8; }
+.sw-turbines{ background:#EF4156; }
+.multi-legend{
+  color: #aaaaaa; font:12px/1 sans-serif;
+  margin: 4px 0 6px;
+}
+
+.barA-fill{ fill:#0078A8; }    /* верхняя полоса */
+.barB-fill{ fill:#EF4156; }    /* нижняя полоса */
+.bar-label{
+  fill: #aaaaaa; font:10px/1 sans-serif;
+  text-anchor:end; dominant-baseline:middle;
+}
+.bar-value{
+  fill: #dddddd; font:10px/1 sans-serif;
+  dominant-baseline:middle;
+}
+.origin-line{
+  stroke: #444;
+  stroke-width:1.5;
+  shape-rendering:crispEdges;
+}
+.gauge-card,
+.summary-card{
+  flex: 1 1 0;                /* равные доли ширины */
+  min-width: 0;               /* разрешаем сжиматься */
+  max-width: none;            /* убираем верхний предел */
+  background: #222;
+  border-radius:12px;
+  padding:0;                  /* убираем внутренние отступы */
+  box-shadow:0 2px 10px rgba(0,0,0,.35);
+  display:flex; flex-direction:column; align-items:center;
+}
+
+/* Заголовок */
+.summary-title{
+  margin:6px 0;
+  font-size:24px;
+  color: #dddddd;
+  text-align:center;
+  letter-spacing:.3px;
+}
+
+/* Кольцо-процент (тонкая «пончик»-полоса) */
+.summary-ring{
+  --p: 78;             /* процент (JS перезапишет) */
+  --th: 12px;          /* толщина кольца */
+  --clr: #0078A8;      /* цвет дуги (JS перезапишет) */
+  width:140px; height:140px; border-radius:50%;
+  background: conic-gradient(var(--clr) calc(var(--p)*1%), #333 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
+          mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
+  position:relative;
+  margin-bottom:12px;
+  }
+.gauge-title{
+  margin:6px 0;
+  font-size:24px;
+  color: #dddddd;
+  text-align:center;
+  letter-spacing:.3px;
+}
+
+/* Итоги: число справа от кольца */
+.summary-ring .value{ display:none; } /* на случай, если останется старый div */
+.summary-inline{ display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:10px; }
+.summary-big{ color: white; font:700 28px/1 sans-serif; }
+
+/* Два KPI-бейджа под кольцом */
+.kpis{
+  display:grid; grid-template-columns: 1fr 1fr; gap:10px; width:100%; max-width:460px;
+}
+.kpi{
+  background: #2a2a2a; border-radius:10px; padding:10px 12px;
+  display:flex; flex-direction:column; gap:4px;
+}
+.kpi-label{ color: #aaaaaa; font:11px/1 sans-serif; text-transform:uppercase; letter-spacing:.3px; }
+.kpi-value{ color: #dddddd; font:700 18px/1 sans-serif; }
+
+/* Контейнер и карточки под линейные графики */
+.lines-container{
+  display:flex;
+  flex-direction:column;  /* большие графики — один под другим */
+  gap:10px;
+  margin-top:10px;
+}
+.line-card{
+  margin-left: 10px;
+  width:100% -10px;
+  background: #222;
+  border-radius:12px;
+  padding:10px 12px;
+  box-shadow:0 2px 10px rgba(0,0,0,.35);
+}
+.line-title{
+  margin:0 0 6px;
+  font-size:20px;
+  color: #dddddd;
+  text-align:center;
+  letter-spacing:.2px;
+}
+.line-svg{ width:100%; height:auto; display:block; }
+
+/* Оси/сетка - адаптивные к теме */
+.axis path, .axis line{ stroke: #444; }
+.axis text{ fill: #aaaaaa; font:12px sans-serif; }
+.grid line{ stroke: #2a2a2a; }
+.grid .domain{ stroke:none; }
+
+/* Цвета серий */
+.line-boilers{ stroke:#0078A8; fill:none; stroke-width:2.5; }
+.line-turbines{ stroke:#ffd400; fill:none; stroke-width:2.5; }
+.line-total{ stroke:#EF4156; fill:none; stroke-width:2.8; }
+
+.dot{ stroke:#111; stroke-width:1.5; }
+.dot-boilers{ fill:#0078A8; }
+.dot-turbines{ fill:#ffd400; }
+.dot-total{ fill:#EF4156; }
+
+/* Подпись значения справа от общей серии (большим шрифтом) */
+.total-big{
+  color: white; font:700 28px/1 sans-serif;
+  margin-left:auto; margin-right:4px; /* прижать вправо в заголовке */
+}
+/* Заливки "прошлый год" — те же цвета, но полупрозрачные */
+.area-boilers-prev  { fill: rgba(116,192,255,.25); }
+.area-turbines-prev { fill: rgba(255, 212, 0, 0.25); }
+.area-total-prev    { fill: rgba(255, 116, 116, 0.25); }
+
+/* Маленькие плашки в легенде */
+.sw-line-boilers{ background:#0078A8; }
+.sw-line-turbines{ background:#ffd400; }
+.sw-line-total{ background:#EF4156; }
+
+.sw-area-boilers{ background:rgba(116,192,255,.25); border:1px solid #0078A8; }
+.sw-area-turbines{ background:rgba(255,212,0,.25); border:1px solid #ffd400; }
+.sw-area-total{ background:rgba(255, 116, 116, 0.25); border:1px solid #EF4156; }
+
+.multi-legend{
+  color: #aaaaaa; font:12px/1 sans-serif; margin: 4px 0 6px; text-align:center;
+}
+.multi-legend .sw{
+  width:12px; height:12px; border-radius:3px; display:inline-block; margin:0 6px 0 12px;
+  vertical-align:middle;
+}
+
+/* Панель управления графиком */
+.line-controls{
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:center;
+  margin:4px 0 6px;
+}
+
+/* Тумблер */
+.switch{
+  position:relative; display:inline-block;
+  width:44px; height:24px;
+}
+.switch input{ display:none; }
+.switch .slider{
+  position:absolute; inset:0;
+  background:#444; border-radius:999px;
+  transition:.2s;
+}
+.switch .slider:before{
+  content:""; position:absolute; height:18px; width:18px;
+  left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s;
+}
+.switch input:checked + .slider{ background:#00d26a; }
+.switch input:checked + .slider:before{ transform:translateX(20px); }
+
+.switch-label{
+  color:#bdbdbd; font:12px/1 sans-serif; margin-left:4px; min-width:46px; text-align:left;
+}
+
+
+
+
+/* Карточка с много-серийным графиком — нужна для абсолютного позиционирования панели */
+.line-card{
+  position: relative; /* НОВОЕ */
+}
+
+/* Заголовок: оставим центр, но зарезервируем место справа под тумблеры */
+.line-card .line-title{
+  padding-right: 130px; /* чтобы заголовок не пересекался с панелью справа */
+}
+
+/* ПАНЕЛЬ ТУМБЛЕРОВ — переносим в правый верхний угол карточки */
+.line-controls{
+  position:absolute;    /* НОВОЕ: фиксируем в углу */
+  top:8px;              /* отступ сверху */
+  right:10px;           /* отступ справа */
+  display:flex;
+  gap:14px;
+  align-items:center;
+  justify-content:flex-end;
+  margin:0;             /* был margin — убираем */
+  z-index: 2;           /* поверх легенды на узких экранах */
+}
+
+/* Тумблер — нейтральная серо-графитовая палитра */
+.switch{
+  position:relative; display:inline-block;
+  width:44px; height:24px;
+}
+.switch input{ display:none; }
+.switch .slider{
+  position:absolute; inset:0;
+  background:#555;              /* базовый фон (выкл) */
+  border-radius:999px;
+  transition:.2s;
+}
+.switch .slider:before{
+  content:""; position:absolute; height:18px; width:18px;
+  left:3px; top:3px;
+  background:#e9eaee;           /* нейтральный «белый» */
+  border-radius:50%;
+  box-shadow:0 1px 2px rgba(0,0,0,.35);
+  transition:.2s;
+}
+/* было #00d26a — СМЕНИЛИ на нейтральный */
+.switch input:checked + .slider{ background:#8f9399; }  /* серо-стальной */
+.switch input:checked + .slider:before{ transform:translateX(20px); }
+
+.switch-label{
+  color: #aaaaaa; font:12px/1 sans-serif;
+  margin-left:4px; min-width:46px; text-align:left;
+}
+
+
+    </style>
+</head>
+<body>
+    <div style="margin-top: 5px;">
+        <!-- Панель выбора периода -->
+        <div class="period-panel" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; background-color: #222; border-radius: 10px; margin-left: 5px; margin-right: 5px; box-sizing: border-box;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span style="color: #dddddd; font-size: 16px; font-weight: bold;">Период:</span>
+                <select id="periodSelectMain" onchange="onPeriodChangeMain()">
+                    <option value="day">День</option>
+                    <option value="month">Месяц</option>
+                    <option value="year">Год</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span style="color: #dddddd; font-size: 16px; font-weight: bold;">Дата:</span>
+                <select id="dateSelectMain" onchange="reloadPageMain()" style="min-width: 150px;"></select>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; margin-left: 20px;">
+                <span style="color: #aaaaaa; font-size: 13px; font-style: italic;">
+                    Рейтинг и графики формируются на основании состояния оборудования после КР
+                </span>
+            </div>
+        </div>
+
+        <div style="display:flex; width: 100%; align-items:flex-start;">
+            <div style="width: 88%;">
+                <div class="gauges-container" style="margin-left: 10px;">
+                    <div class="gauge-card">
+                    <h3 class="gauge-title">Котлы</h3>
+                    <svg id="gauge-1" class="gauge-svg" viewBox="0 20 320 160" preserveAspectRatio="xMidYMid meet"></svg>
+                    </div>
+
+                    <div class="summary-card">
+                    <h3 class="summary-title" style="margin-bottom: 10px;">Итоги</h3>
+
+                    <!-- Кольцо с процентом -->
+                    <div class="summary-inline">
+                    <div class="summary-ring" id="summary-ring"></div>
+                    <div class="summary-big" id="summary-percent-out">0%</div>
+                    </div>
+
+                    <!-- Два KPI: Экономия (отрицательные) / Перерасход (положительные) -->
+                    <div class="kpis" style="margin-bottom: 16px;">
+                        <div class="kpi">
+                        <div class="kpi-label" id="kpi-rub-label">Резервы, ₽</div>
+                        <div class="kpi-value" id="kpi-rub">—</div>
+                        </div>
+                        <div class="kpi">
+                        <div class="kpi-label" id="kpi-tut-label">Резервы, ТУТ</div>
+                        <div class="kpi-value" id="kpi-tut">—</div>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="gauge-card">
+                    <h3 class="gauge-title">Турбины</h3>
+                    <svg id="gauge-2" class="gauge-svg" viewBox="0 20 320 160" preserveAspectRatio="xMidYMid meet"></svg>
+                    </div>
+                </div>
+                <div class="bars-container">
+                    <div class="bar-card">
+                        <div class="mini-title">Пережоги Котлы</div>
+                        <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
+                        <svg id="bars-left" class="mini-svg"></svg>
+                        </div>
+
+                        <div class="bar-card">
+                        <div class="mini-title">Пережоги Турбины</div>
+                        <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
+                        <svg id="bars-right" class="mini-svg"></svg>
+                    </div>
+                </div>
+                <div class="lines-container" style="margin-bottom: 4px;">
+                    <div class="line-card">
+                        <div class="line-title" style="text-align:center;">Котлы / Турбины / Итоги (сумма)</div>
+
+                        <!-- ПАНЕЛЬ ПЕРЕКЛЮЧАТЕЛЕЙ -->
+                        <div class="line-controls">
+                        <!-- ₽ / ТУТ (по умолчанию checked = рубли) -->
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-currency" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <span class="switch-label" id="label-currency">₽</span>
+
+                        <!-- Накопительно -->
+                        <label class="switch" style="margin-left:18px;">
+                            <input type="checkbox" id="toggle-cum">
+                            <span class="slider"></span>
+                        </label>
+                        <span class="switch-label">Накопительно</span>
+                        </div>
+
+                        <!-- ЛЕГЕНДА (текущий год — линия, прошлый — заливка) -->
+                        <div class="multi-legend">
+                        <span class="sw sw-line-boilers"></span>Котлы (тек.)
+                        <span class="sw sw-area-boilers"></span>Котлы (прошл.)
+                        <span class="sw sw-line-turbines" style="margin-left:14px;"></span>Турбины (тек.)
+                        <span class="sw sw-area-turbines"></span>Турбины (прошл.)
+                        <span class="sw sw-line-total" style="margin-left:14px;"></span>Итоги (тек.)
+                        <span class="sw sw-area-total"></span>Итоги (прошл.)
+                        </div>
+
+                        <svg id="line-multi" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
+                    </div>
+                </div>
+
+            </div>
+            <div class="rating-container">
+                <h2 style="margin-bottom: 10px;margin-top: 5px;">Рейтинг:</h2>
+            </div>
+        </div>
+    </div>
+    
+    <div id="tooltip" class="tooltip"></div> <!-- Специальный элемент для всплывающей подсказки -->
+
+    <script>
+    // Текущее состояние из модели
+    const currentPeriodType = @((int)Model.SelectedPeriod);
+    const currentSelectedDate = '@(Model.SelectedDate?.ToString("yyyy-MM-dd") ?? "")';
+
+    // Панель выбора периода (вверху)
+    const periodSelectMain = document.getElementById('periodSelectMain');
+    const dateSelectMain = document.getElementById('dateSelectMain');
+
+    // Устанавливаем текущий тип периода
+    if (currentPeriodType === 0) periodSelectMain.value = 'day';
+    else if (currentPeriodType === 1) periodSelectMain.value = 'month';
+    else if (currentPeriodType === 2) periodSelectMain.value = 'year';
+
+    // Загружаем доступные даты при загрузке страницы
+    document.addEventListener('DOMContentLoaded', () => loadAvailableDates());
+
+    async function loadAvailableDates() {
+        const period = periodSelectMain.value;
+        let url = '';
+
+        if (period === 'day') {
+            url = '/api/Data/available-days';
+        } else if (period === 'month') {
+            url = '/api/Data/available-months';
+        } else {
+            url = '/api/Data/available-years';
+        }
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            dateSelectMain.innerHTML = '';
+
+            if (period === 'year') {
+                if (data.years && data.years.length > 0) {
+                    data.years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y.date;
+                        opt.textContent = y.displayText;
+                        dateSelectMain.appendChild(opt);
+                    });
+                }
+            } else {
+                if (data.dates) {
+                    data.dates.forEach(d => {
+                        const option = document.createElement('option');
+                        option.value = d.date;
+                        option.textContent = d.displayText;
+                        dateSelectMain.appendChild(option);
+                    });
+                }
+            }
+
+            // Устанавливаем текущую выбранную дату если есть
+            if (currentSelectedDate && dateSelectMain.querySelector(`option[value="${currentSelectedDate}"]`)) {
+                dateSelectMain.value = currentSelectedDate;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки дат:', error);
+        }
+    }
+
+    // Функции для панели выбора периода
+    function onPeriodChangeMain() {
+        loadAvailableDates().then(() => {
+            if (dateSelectMain.options.length > 0) {
+                reloadPageMain();
+            }
+        });
+    }
+
+    function reloadPageMain() {
+        const selectedPeriod = periodSelectMain.value;
+        const selectedDate = dateSelectMain.value;
+        // Сохраняем в localStorage для синхронизации между вкладками
+        localStorage.setItem('selectedPeriod', selectedPeriod);
+        if (selectedDate) {
+            localStorage.setItem('selectedDate', selectedDate);
+        } else {
+            localStorage.removeItem('selectedDate');
+        }
+        let url = `@Url.Action("Index", "Home")?selectedPeriod=${selectedPeriod}`;
+        if (selectedDate) {
+            url += `&selectedDate=${selectedDate}`;
+        }
+        window.location.href = url;
+    }
+    </script>
+
+    <script>
+        const stations = {
+            25: `РефГРЭС`,   // для Рефтинской
+            9: `ТуГРЭС`,    // для Томь-Усинской
+            15: `БелГРЭС`,   // для Беловской
+            1: `НазГРЭС`,    // для Назаровской
+            24: `КрГРЭС-2`,   // для Красноярской-2
+            26: `ПрГРЭС`,    // для Приморской
+            14: `КемТЭЦ`,
+            3: `НкТЭЦ`,
+            6: `БарТЭЦ-2`,
+            7: `БарТЭЦ-3`,
+            22: `БиТЭЦ`,
+            4: `КрТЭЦ-1`,
+            2: `КрТЭЦ-2`,
+            12: `КрТЭЦ-3`,
+            13: `КанТЭЦ`,
+            8: `АбТЭЦ`,
+            10: `МинТЭЦ`,
+            17: `НТЭЦ-2`,
+            18: `НТЭЦ-3`,
+            19: `НТЭЦ-4`,
+            20: `НТЭЦ-5`,
+            21: `БбТЭЦ`,
+            5: `КемГРЭС`
+        };
+
+        // Станции типа ТЭЦ + КемГРЭС (для исключения турбин из рейтинга)
+        const tecStations = [14, 3, 6, 7, 22, 4, 2, 12, 13, 8, 10, 17, 18, 19, 20, 21, 5];
+
+        // Флаг исключения турбин ТЭЦ (читаем из localStorage, по умолчанию true)
+        const excludeTecTurbinesFlag = localStorage.getItem('excludeTecTurbines') !== 'false';
+
+        const stationLinks = {
+            25: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%AD%D0%A1',   // для Рефтинской
+            9: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A2%D0%A3%D0%93%D0%A0%D0%AD%D0%A1',    // для Томь-Усинской
+            15: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B5%D0%BB%D0%93%D0%A0%D0%AD%D0%A1',   // для Беловской
+            1: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%93%D0%A0%D0%AD%D0%A1',    // для Назаровской
+            24: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%93%D0%A0%D0%AD%D0%A1-2',   // для Красноярской-2
+            26: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9F%D0%A0%D0%93%D0%A0%D0%AD%D0%A1',    // для Приморской
+            14: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%B5%D0%BC%D0%A2%D0%AD%D0%A6',
+            3: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%9A%D0%A2%D0%AD%D0%A6',
+            6: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%90%D0%BB%D1%82%D0%B0%D0%B9%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B0%D1%80%D0%A2%D0%AD%D0%A6-2',
+            7: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%90%D0%BB%D1%82%D0%B0%D0%B9%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B0%D1%80%D0%A2%D0%AD%D0%A6-3',
+            22: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%90%D0%BB%D1%82%D0%B0%D0%B9%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B8%D0%B9%D0%A2%D0%AD%D0%A6',
+            4: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D1%80%D0%A2%D0%AD%D0%A6-1',
+            2: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D1%80%D0%A2%D0%AD%D0%A6-2',
+            12: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D1%80%D0%A2%D0%AD%D0%A6-3',
+            13: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%B0%D0%BD%D0%A2%D0%AD%D0%A6',
+            8: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%90%D0%B1%D0%A2%D0%AD%D0%A6',
+            10: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9C%D0%B8%D0%BD%D0%A2%D0%AD%D0%A6',
+            17: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%A2%D0%AD%D0%A6-2',
+            18: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%A2%D0%AD%D0%A6-3',
+            19: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9D%D0%A2%D0%AD%D0%A6-4',
+            20: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9D%D0%BE%D0%B2%D0%A2%D0%AD%D0%A6-5',
+            21: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B1%D0%A2%D0%AD%D0%A6',
+            5: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%B5%D0%BC%D0%93%D0%A0%D0%AD%D0%A1'
+        };
+
+        // ============ НОРМАТИВНЫЕ ЗНАЧЕНИЯ КПД И УРТ ============
+        // Загружаются динамически из файла normative_config.xlsx через сервис NormativeValues
+        // Для изменения значений используйте страницу Параметры -> Нормативные значения КПД и УРТ
+
+        const kpdvalues = @Html.Raw(NormativeValues.GetKpdValuesAsJson());
+
+        const urtvalues = @Html.Raw(NormativeValues.GetUrtValuesAsJson());
+
+
+        // ============ КОНЕЦ БЛОКА НОРМАТИВНЫХ ЗНАЧЕНИЙ ============
+
+
+        // [УДАЛЕНО: Все захардкоженные константы теперь загружаются динамически из normative_config.xlsx]
+        // Берём данные из C# и превращаем их в пригодный для D3.js формат
+    const turbinsData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Turbines));
+    const boilersData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Boilers));
+    const PRECALC_RESERVES_RUB = @Model.ReservesRub.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    // Читаем настройку исключения турбин ТЭЦ из localStorage (по умолчанию true)
+    const excludeTecFromUrl = localStorage.getItem('excludeTecTurbines') !== 'false';
+
+        // Форматируем данные в иерархическом виде
+    const hierarchicalData_turbin = {
+        name: "Turbines",
+        children: turbinsData.map(item => {
+            // ✅ ИЗМЕНЕНО: Сначала пытаемся взять NominalURT из БД
+            let nominalValue = item.NominalURT || 0;
+
+            // ✅ Если значение из БД равно 0, берем из массива нормативов (fallback)
+            if (nominalValue === 0) {
+                const stationUrtValues = urtvalues[item.StationID];
+                const turbinKey = parseInt(item.TurbinID);
+
+                if (stationUrtValues && stationUrtValues[turbinKey] && stationUrtValues[turbinKey] > 0) {
+                    nominalValue = stationUrtValues[turbinKey];
+                } else {
+                    // Если и в массиве нет данных, используем дефолтное значение
+                    nominalValue = 2300;
+                }
+            }
+
+            // Если включено исключение турбин ТЭЦ и станция - ТЭЦ, обнуляем рейтинг
+            const isTecStation = tecStations.includes(item.StationID);
+            const shouldExclude = excludeTecFromUrl && isTecStation;
+
+            return {
+                urt: item.URT,
+                size: shouldExclude ? 0 : item.Consumption, // Обнуляем вес для ТЭЦ турбин
+                station: item.StationID,
+                turbin: item.TurbinID,
+                urt_percent: shouldExclude ? 0 : (((item.URT - nominalValue) / item.URT) * 100),
+                urt_percent_normal: nominalValue,
+                excluded: shouldExclude // Флаг для визуализации
+            };
+        })
+    };
+
+        
+        const hierarchicalData_boiler = {
+    name: "Boilers",
+    children: boilersData.map(item => {
+        const stationID = item.StationID;
+        const boilerID = item.BoilerID;
+        
+        // Логирование для отладки
+        console.log('Processing boiler:', {
+            stationID: stationID,
+            boilerID: boilerID,
+            stationName: stations[stationID] || 'Unknown station',
+            hasKpdValues: kpdvalues.hasOwnProperty(stationID),
+            kpdValuesForStation: kpdvalues[stationID] ? Object.keys(kpdvalues[stationID]) : 'No kpdvalues for station',
+            hasBoilerInKpd: kpdvalues[stationID] ? kpdvalues[stationID].hasOwnProperty(boilerID) : false
+        });
+
+        // Проверяем существование данных
+        if (!kpdvalues[stationID]) {
+            console.error(`❌ No kpdvalues found for station ID: ${stationID} (${stations[stationID] || 'Unknown'})`);
+            console.error(`Available stations in kpdvalues:`, Object.keys(kpdvalues));
+        } else if (!kpdvalues[stationID].hasOwnProperty(boilerID)) {
+            console.warn(`⚠️ No kpd value found for boiler ${boilerID} at station ${stationID} (${stations[stationID] || 'Unknown'})`);
+            console.warn(`Available boilers for station ${stationID}:`, Object.keys(kpdvalues[stationID]));
+        }
+
+        const kpdValue = kpdvalues[stationID] ? kpdvalues[stationID][boilerID] : undefined;
+        const baseKPD = kpdValue > 0 ? kpdValue : 91;
+        const kpd_percent = (((item.KPD - baseKPD) / item.KPD) * 100);
+        const kpd_percent_normal = baseKPD;
+
+        return {
+            kpd: item.KPD,
+            size: item.Consumption,
+            station: item.StationID,
+            boiler: item.BoilerID,
+            kpd_percent: kpd_percent,
+            kpd_percent_normal: kpd_percent_normal
+        };
+    }) 
+};
+
+        // Объединяем данные и сортируем по StationID
+        const combinedData = hierarchicalData_turbin.children.concat(hierarchicalData_boiler.children);
+        
+        
+        // Функция для вычисления рейтинга
+        function calculateRating(group) {
+        const sumUrtPercent = group.reduce((acc, curr) => {
+        const value = curr.urt_percent !== undefined ? curr.urt_percent : 0;
+        return acc + parseFloat(value) * curr.size * -1;
+        }, 0);
+
+        const sumKpdPercent = group.reduce((acc, curr) => {
+            const value = curr.kpd_percent !== undefined ? curr.kpd_percent : 0;
+            return acc + parseFloat(value) * curr.size;
+        }, 0);
+
+        const totalSum = group.reduce((acc, curr) => acc + curr.size, 0);
+
+        // Определяем StationID из группы
+        const stationId = group.length > 0 ? group[0].station : null;
+
+        // Если галочка включена и это ТЭЦ - не умножаем на 2 (только котлы)
+        const isTec = tecStations.includes(parseInt(stationId));
+        const multiplier = (excludeTecTurbinesFlag && isTec) ? 1 : 2;
+
+        // Проверка на случай, если totalSum равен 0
+        return totalSum !== 0 ? (sumUrtPercent + sumKpdPercent) * multiplier / totalSum : 0;
+
+        }
+
+        // ... (весь предыдущий код остается без изменений до создания рейтинга)
+
+// Группируем данные по StationID
+const groupedData = {};
+combinedData.forEach(item => {
+    if (!groupedData[item.station]) {
+        groupedData[item.station] = [];
+    }
+    groupedData[item.station].push(item);
+});
+
+// Создаем массив объектов для рейтинга
+const ratings = Object.keys(groupedData).map(key => ({
+    StationID: key,
+    rating: calculateRating(groupedData[key]),
+    hasData: true
+}));
+
+// Сортируем рейтинг по значению
+ratings.sort((a, b) => b.rating - a.rating);
+
+// ✅ НОВОЕ РЕШЕНИЕ: Создаем объект для быстрого поиска станций с рейтингом
+const ratingsMap = {};
+ratings.forEach(r => {
+    ratingsMap[r.StationID] = true;
+});
+
+// ✅ Находим станции без данных - берем все станции и исключаем те, что есть в ratingsMap
+const stationsWithoutData = Object.keys(stations)
+    .filter(stationID => !ratingsMap[stationID])
+    .map(stationID => ({
+        StationID: stationID,
+        rating: null,
+        hasData: false
+    }));
+const temp = stationsWithoutData.filter(station => station.hasData !== true);
+// Объединяем: сначала станции с данными, потом без данных
+const allRatings = [...ratings, ...temp];
+
+
+
+// Выбираем контейнер рейтинга
+const ratingContainer = d3.select('.rating-container');
+
+function selectColorForRating(rt, hasData) {
+    if (!hasData) return 'score-value-0'; // ✅ Серый для станций без данных
+    if (rt < 0) return 'score-value-3'; // Красный
+    if (rt >= 0) return 'score-value-4'; // Светло-зеленый
+    return 'score-value-0'; // Серый по умолчанию
+}
+
+// Обновленные функции highlightStation и resetHighlight
+function highlightStation(StationID) {
+    // Затемняем все элементы и текст
+    d3.selectAll(".node rect")
+        .style("opacity", 0.3);
+    d3.selectAll(".node text")
+        .style("opacity", 0.3);
+
+    // Подсвечиваем элементы выбранной станции
+    d3.selectAll(".node")
+        .filter(d => d.data && d.data.station == StationID)
+        .select("rect")
+        .style("opacity", 1);
+
+    d3.selectAll(".node")
+        .filter(d => d.data && d.data.station == StationID)
+        .selectAll("text")
+        .style("opacity", 1);
+}
+
+function resetHighlight() {
+    // Возвращаем нормальную прозрачность всем элементам
+    d3.selectAll(".node rect, .node text")
+        .style("opacity", 1);
+}
+
+// ✅ НОВОЕ: Переменная для отслеживания выбранной станции
+let selectedStationID = null;
+
+// Генерируем карточки рейтинга с обработкой станций без данных
+allRatings.forEach((rating, index) => {
+    const cardDiv = ratingContainer.append('div')
+        .attr('class', 'rating-card');
+    
+    const ratingInfo = cardDiv.append('div')
+        .attr('class', 'rating-info')
+        .on('click', function() {
+            if (stationLinks[rating.StationID]) {
+                window.open(stationLinks[rating.StationID], '_blank');
+            }
+        });
+    
+    ratingInfo.append('span')
+        .attr('class', 'rank-number')
+        .text(index + 1 + '.');
+    
+    ratingInfo.append('span')
+        .attr('class', 'user-name')
+        .text(stations[rating.StationID]);
+    
+    ratingInfo.append('span')
+        .attr('class', selectColorForRating(rating.rating, rating.hasData))
+        .text(rating.hasData ? `${rating.rating.toFixed(2)}%` : 'Нет данных');
+    
+   
+});
+
+    function drawGauge(svgId, value, { start = -Math.PI/2, end = Math.PI/2, orient = 'auto' } = {}){
+  const svg = d3.select('#'+svgId);
+  svg.selectAll('*').remove();
+
+  // Геометрия
+  const W = 320, H = 180;
+  const cx = W/2;
+  const rOuter = 130;
+  const thickness = 45;
+  const rInner = 85;
+  const cy = 160;
+
+  // Определяем цвет на основе значения: зелёный для положительных, красный для отрицательных
+  const valueColor = value >= 0 ? '#00d26a' : '#EF4156';
+  const valueColorLight = value >= 0 ? '#00ff88' : '#ff6b6b';
+
+  // Кламп значения для дуги (от 0 до 100, где 50 = 0%)
+  // Значение от -5% до +5% отображается от 0 до 100
+  const normalizedValue = Math.max(0, Math.min(100, 50 + value * 10)); // -5% = 0, 0% = 50, +5% = 100
+
+  // Группа в центре — ВСЁ рисуем внутри неё (градиент тоже в её системе)
+  const gRoot = svg.append('g').attr('transform', `translate(${cx},${cy})`);
+
+  // --- Градиент для дуги: красный слева, зелёный справа ---
+  const defs = svg.append('defs');
+  const gradId = `grad-${svgId}`;
+
+  const g = defs.append('linearGradient')
+    .attr('id', gradId)
+    .attr('gradientUnits', 'userSpaceOnUse')
+    .attr('x1', -rOuter).attr('y1', 0)
+    .attr('x2', rOuter).attr('y2', 0);
+
+  // Градиент: красный (плохо) -> жёлтый (нейтрально) -> зелёный (хорошо)
+  g.append('stop').attr('offset', '0%').attr('stop-color', '#EF4156');   // красный (левая часть = минус)
+  g.append('stop').attr('offset', '50%').attr('stop-color', '#ffd400');  // жёлтый (середина = ноль)
+  g.append('stop').attr('offset', '100%').attr('stop-color', '#00d26a'); // зелёный (правая часть = плюс)
+
+  // Шкала угла
+  const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
+
+  // Фон дуги (полная дуга серая)
+  gRoot.append('path')
+    .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(end))
+    .attr('fill', '#3a3a3a');
+
+  // Центральная линия (ноль) - тонкая вертикальная линия посередине
+  gRoot.append('line')
+    .attr('x1', 0).attr('y1', -rOuter)
+    .attr('x2', 0).attr('y2', -rInner)
+    .attr('stroke', '#666')
+    .attr('stroke-width', 2);
+
+  // Заполненная часть дуги
+  gRoot.append('path')
+    .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(scale(normalizedValue)))
+    .attr('fill', `url(#${gradId})`);
+
+  // Число по центру с цветом зависящим от знака
+  const c = value > 0 ? '+' : '';
+  gRoot.append('text')
+    .attr('x', 0).attr('y', -10)
+    .attr('text-anchor','middle')
+    .attr('fill', valueColor)
+    .attr('font-family','sans-serif').attr('font-size','28px').attr('font-weight','700')
+    .text(`${c}${value.toFixed(2)}%`);
+}
+// ---- Расчёт средневзвешенного рейтинга для котлов и турбин ----
+// Для котлов: взвешиваем по выработке тепла (Production/size)
+// Для турбин: взвешиваем по расходу топлива (Consumption/size)
+
+function calculateWeightedRatingBoilers(boilersArray) {
+    // boilersArray - массив объектов с kpd_percent и size (Production)
+    let sumRatingWeighted = 0;
+    let totalWeight = 0;
+
+    boilersArray.forEach(boiler => {
+        const rating = boiler.kpd_percent || 0;
+        const weight = boiler.size || 0; // Production - выработка тепла
+
+        if (weight > 0) {
+            sumRatingWeighted += rating * weight;
+            totalWeight += weight;
+        }
+    });
+
+    return totalWeight > 0 ? sumRatingWeighted / totalWeight : 0;
+}
+
+function calculateWeightedRatingTurbines(turbinesArray) {
+    // turbinesArray - массив объектов с urt_percent и size (Consumption)
+    let sumRatingWeighted = 0;
+    let totalWeight = 0;
+
+    turbinesArray.forEach(turbine => {
+        // Для турбин: чем выше УРТ, тем хуже. Рейтинг уже вычислен как urt_percent
+        // Отрицательное значение urt_percent означает экономию (лучше нормы)
+        const rating = turbine.urt_percent || 0;
+        const weight = turbine.size || 0; // Consumption - расход топлива
+
+        if (weight > 0) {
+            sumRatingWeighted += rating * weight;
+            totalWeight += weight;
+        }
+    });
+
+    return totalWeight > 0 ? sumRatingWeighted / totalWeight : 0;
+}
+
+// Вычисляем общие рейтинги
+const GAUGE_LEFT = calculateWeightedRatingBoilers(hierarchicalData_boiler.children);   // Котлы
+const GAUGE_RIGHT = calculateWeightedRatingTurbines(hierarchicalData_turbin.children) * -1;  // Турбины (инвертируем, т.к. для турбин отрицательный % = хорошо)
+
+console.log('Общий рейтинг котлов (средневзвешенный по выработке тепла):', GAUGE_LEFT.toFixed(2) + '%');
+console.log('Общий рейтинг турбин (средневзвешенный по расходу топлива):', GAUGE_RIGHT.toFixed(2) + '%');
+
+// Рисуем спидометры с вычисленными значениями
+drawGauge('gauge-1', GAUGE_LEFT);
+drawGauge('gauge-2', GAUGE_RIGHT);
+
+// ---- Расчёт резервов в ТУТ по алгоритму изменения расхода топлива ----
+// Формулы из файла "Алгоритм расчета изменения расхода топлива.xlsx":
+//
+// Для турбин (∆ВТА):
+//   ∆qТ(БР) = УРТ_факт - УРТ_после_КР
+//   ∆ВТА = ∆qТ(БР) * Э / 7000 / (ηК(Н)/100) / (ηТП/100)
+//   где Э = Consumption (выработка э/э, тыс.кВт·ч), ηК(Н) = 85%, ηТП = 98%
+//
+// Для котлов (∆ВКА):
+//   ∆ВКА = (КПД_после_КР - КПД_факт) / 100 * ВКФАКТ
+//   где ВКФАКТ = Consumption котла (расход топлива фактический)
+//
+// Итого ТУТ = SUM(∆ВТА) + SUM(∆ВКА)
+
+const ETA_KN = 85;   // КПД котлов нетто, %
+const ETA_TP = 98;   // Коэффициент теплового потока, %
+
+// Расчёт ∆ВТА по каждой турбине
+let totalDeltaTurbines = 0;
+hierarchicalData_turbin.children.forEach(t => {
+    if (t.excluded) return; // пропускаем исключённые ТЭЦ турбины
+    if (t.size <= 0) return;
+    const urtFact = t.urt;
+    const urtKR = t.urt_percent_normal; // NominalURT (из БД или конфига)
+    const consumption = t.size;          // Consumption = выработка э/э
+    const deltaQ = urtFact - urtKR;      // ∆qТ(БР)
+    const deltaBTA = deltaQ * consumption / 7000 / (ETA_KN / 100) / (ETA_TP / 100);
+    totalDeltaTurbines += deltaBTA;
+});
+
+// Расчёт ∆ВКА по каждому котлу
+let totalDeltaBoilers = 0;
+hierarchicalData_boiler.children.forEach(b => {
+    if (b.size <= 0) return;
+    const kpdFact = b.kpd;
+    const kpdKR = b.kpd_percent_normal;  // КПД после КР (из конфига или дефолт)
+    const consumption = b.size;           // Consumption = расход топлива фактический
+    const deltaBKA = (kpdKR - kpdFact) / 100 * consumption;
+    totalDeltaBoilers += deltaBKA;
+});
+
+const RESERVES_TUT = totalDeltaTurbines + totalDeltaBoilers;
+// Резервы в рублях — предрассчитаны на бэкенде (SUM по дням для месяца, SUM по месяцам для года)
+const RESERVES_RUB = PRECALC_RESERVES_RUB;
+
+const fmtInt = d3.format(",");
+const fmtRu = n => fmtInt(Math.round(n)).replace(/,/g, " ");
+function fmtMoneyRu(n){
+  const abs = Math.abs(n);
+  if (abs >= 1e9)  return `${(n/1e9).toFixed(1).replace('.', ',')} млрд`;
+  if (abs >= 1e6)  return `${(n/1e6).toFixed(1).replace('.', ',')} млн`;
+  if (abs >= 1e3)  return `${(n/1e3).toFixed(1).replace('.', ',')} тыс`;
+  return fmtRu(n);
+}
+
+// ---- Цвет по проценту (красный → жёлтый → зелёный) ----
+const _interpRY = d3.interpolateRgb("#ff2d2d", "#ffd400");
+const _interpYG = d3.interpolateRgb("#ffd400", "#00d26a");
+function colorForPercent(p){
+  const t = Math.max(0, Math.min(1, p/100));
+  return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
+}
+
+// ---- Обновляем карточку «Итоги» ----
+(function updateSummary(){
+  const overall = (200 + GAUGE_LEFT + GAUGE_RIGHT) / 2;           // простое среднее
+  const ring = document.getElementById('summary-ring');
+  const percentOut = document.getElementById('summary-percent-out');
+  const rubEl = document.getElementById('kpi-rub');
+  const tutEl = document.getElementById('kpi-tut');
+  const rubLabelEl = document.getElementById('kpi-rub-label');
+  const tutLabelEl = document.getElementById('kpi-tut-label');
+
+  const totalValue = GAUGE_LEFT + GAUGE_RIGHT;
+  const c = totalValue > 0 ? '+' : '';
+
+  // Цвет: зелёный для положительных, красный для отрицательных
+  const summaryColor = totalValue >= 0 ? '#00d26a' : '#EF4156';
+
+  // Процент и кольцо
+  ring.style.setProperty('--p', overall.toFixed(1));
+  ring.style.setProperty('--clr', summaryColor);
+  percentOut.textContent = `${c}${totalValue.toFixed(2)}%`;
+  percentOut.style.color = summaryColor;
+
+  // Определяем тип: Экономия (отрицательные значения = хорошо) или Перерасход (положительные = плохо)
+  // Отрицательный резерв = экономия топлива (зелёный)
+  // Положительный резерв = перерасход топлива (красный)
+  const isEconomy = RESERVES_TUT < 0;
+  const labelText = isEconomy ? 'Экономия' : 'Перерасход';
+  const valueColor = isEconomy ? '#00d26a' : '#EF4156';
+
+  // Обновляем метки
+  rubLabelEl.textContent = `${labelText}, ₽`;
+  tutLabelEl.textContent = `${labelText}, ТУТ`;
+
+  // Обновляем значения с цветом (абсолютные значения, знак уже в названии)
+  const absTut = Math.abs(RESERVES_TUT);
+  const absRub = Math.abs(RESERVES_RUB);
+
+  tutEl.textContent = fmtRu(absTut);
+  tutEl.style.color = valueColor;
+
+  rubEl.textContent = `₽ ${fmtMoneyRu(absRub)}`;
+  rubEl.style.color = valueColor;
+})();
+
+        // ===== НАСТРОЙКИ МАСШТАБА =====
+  const UNIT = 'ТУТ';                 // единица измерения
+  const SCALE_MODE = 'auto';          // 'auto' или 'fixed'
+  const FIXED_MAX = 3000;             // если SCALE_MODE === 'fixed'
+
+  // ===== КОНСТАНТНЫЕ ДАННЫЕ в ТУТ (пример) =====
+  // Две серии (a и b) на каждый показатель.
+  const LEFT_BARS2 = [
+    { label: 'Присосы воздуха КА', a: 1250, b: 980 },
+    { label: 'Хим. и мех. недожоги', a: 840,  b: 920 },
+    { label: 'Избыток воздуха в РС', a: 1630, b: 1510 },
+    { label: 'Температура ух.газов', a: 690,  b: 730 },
+    { label: 'Расход ээ и тэ', a: 1420, b: 1330 },
+  ];
+  const RIGHT_BARS2 = [
+    { label: 'Давление пара в конденсаторе', a: 910,  b: 820 },
+    { label: 'Работа дубль-блоков с 1 корп', a: 1970, b: 1820 },
+    { label: 'Температура ПВ', a: 1360, b: 1480 },
+    { label: 'Температура св.пара', a: 1210, b: 990  },
+    { label: 'Давление св.пара', a: 1210, b: 990  },
+    { label: 'Температура пара после пп', a: 1210, b: 990  },
+    { label: 'Давление пара в рег. отборах', a: 780,  b: 860  },
+    { label: 'Неплановые пуски', a: 660,  b: 590  },
+  ];
+
+  // формат числа "1 234"
+const _fmtInt = d3.format(",");
+const fmtTU = v => _fmtInt(Math.round(+v||0)).replace(/,/g," ");
+
+// общий максимум (если нужно)
+function computeSharedMax(datasets){
+  let m = 0;
+  datasets.forEach(rows => rows.forEach(d => { m = Math.max(m, +d.a||0, +d.b||0); }));
+  return m * 1.05; // небольшой запас
+}
+
+// ДВОЙНЫЕ БАРЫ: линия слева, подпись перед линией, бары вправо (левый край прямой, правый скруглён)
+// rows: [{label, a, b}], opts: {sharedMax, unit, barHeight, gap}
+function drawDualBars(svgId, rows, opts = {}) {
+  const UNIT = opts.unit || 'ТУТ';
+
+  const svg = d3.select('#'+svgId);
+  svg.selectAll('*').remove();
+
+  const barH = opts.barHeight ?? 22;   // высота дорожки
+  const gap  = opts.gap ?? 10;
+  const minPadLbl = 90;                // минимум слева под подпись показателя
+  const minPadVal = 50;                // минимум справа под вывод значений
+  const padT = 8, padB = 12;
+  const W = 320;                       // viewBox — SVG резиновый
+
+  // 1) замеряем реальные ширины подписей и значений
+  const meas = svg.append('g').attr('opacity', 0);
+  const mLabel = meas.append('text').attr('class','bar-label');
+  const mValue = meas.append('text').attr('class','bar-value');
+
+  const labelTexts = rows.map(d => d.label);
+  const valueTexts = rows.flatMap(d => [ `${fmtTU(d.a)} ${UNIT}`, `${fmtTU(d.b)}` ]);
+
+  const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
+  const wValue = s => { mValue.text(s); return mValue.node().getComputedTextLength(); };
+
+  let maxLabelW = 0; labelTexts.forEach(s => maxLabelW = Math.max(maxLabelW, wLabel(s)));
+  let maxValueW = 0; valueTexts.forEach(s => maxValueW = Math.max(maxValueW, wValue(s)));
+  meas.remove();
+
+  // поля: слева под подпись, справа под числа
+  let padLbl = Math.max(minPadLbl, Math.ceil(maxLabelW) + 12);
+  let padVal = Math.max(minPadVal, Math.ceil(maxValueW) + 10);
+
+  // гарантированный минимум ширины под бары
+  const minBarW = 100;
+  padLbl = Math.min(padLbl, W - padVal - minBarW);
+
+  const innerW = Math.max(minBarW, W - padLbl - padVal - 1);
+  const H = padT + rows.length*(barH+gap) - gap + padB;
+  svg.attr('viewBox', `0 0 ${W} ${H}`);
+
+  // ось в x = padLbl
+  const axisX = padLbl;
+
+  // общий масштаб по X
+  const xMax = opts.sharedMax ?? computeSharedMax([rows]);
+  const x = d3.scaleLinear().domain([0, xMax]).range([0, innerW]);
+
+  // линия-ось
+  svg.append('line')
+    .attr('class','origin-line')
+    .attr('x1', axisX).attr('y1', padT - 2)
+    .attr('x2', axisX).attr('y2', padT + rows.length*(barH+gap) - gap + 2);
+
+  const g = svg.append('g').attr('transform', `translate(${axisX + 1},${padT})`);
+
+  // path: прямой левый край (у оси), правый скруглён
+  function pillRight(yTop, height, width){
+    const w = Math.max(0, +width||0);
+    if (w <= 0) return '';
+    const r = Math.min(height/2, w);
+    const xL = 0, xR = w, xRm = w - r;
+    const yT = yTop, yB = yTop + height;
+    // M 0,yT H w-r Q w,yT w,yT+r V w,yB-r Q w,yB w-r,yB H 0 Z
+    return `M ${xL},${yT} H ${xRm} Q ${xR},${yT} ${xR},${yT+r} V ${xR},${yB-r} Q ${xR},${yB} ${xRm},${yB} H ${xL} Z`;
+  }
+
+  rows.forEach((d,i)=>{
+    const y = i*(barH+gap);
+    const half = (barH/2) - 2;
+
+
+    // серия 1 (верх)
+    const aW = x(Math.max(0, +d.a||0));
+    g.append('path').attr('d', pillRight(y + 1, half, aW)).attr('class','barA-fill');
+
+    // серия 2 (низ)
+    const bW = x(Math.max(0, +d.b||0));
+    g.append('path').attr('d', pillRight(y + barH - 1 - half, half, bW)).attr('class','barB-fill');
+
+    // значения — сразу ПОСЛЕ соответствующей полосы (справа от неё)
+    g.append('text')
+      .attr('class','bar-value')
+      .attr('x', aW + 8)
+      .attr('y', y + 1 + half/2 + .5)
+      .attr('text-anchor','start')
+      .text(`${fmtTU(d.a)}`);
+
+    g.append('text')
+      .attr('class','bar-value')
+      .attr('x', bW + 8)
+      .attr('y', y + barH - 1 - half + half/2 + .5)
+      .attr('text-anchor','start')
+      .text(`${fmtTU(d.b)}`);
+  });
+
+  // подписи показателей — ПЕРЕД линией, справа выравниваем к оси
+  const labelsG = svg.append('g').attr('transform', `translate(${axisX - 8},${padT})`);
+  labelsG.selectAll('text').data(rows).enter().append('text')
+    .attr('class','bar-label')
+    .attr('x', 0)
+    .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
+    .attr('text-anchor', 'end')
+    .text(d=> d.label);
+}
+
+const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]);
+drawDualBars('bars-left',  LEFT_BARS2,  { sharedMax: SHARED_MAX, unit: UNIT });
+drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX, unit: UNIT });
+
+
+const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+
+// ТЕКУЩИЙ ГОД — данные резервов в рублях по месяцам (с бэкенда)
+const SERIES_BOILERS  = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyBoilersRub));
+const SERIES_TURBINES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTurbinesRub));
+const SERIES_TOTAL    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTotalRub));
+
+// ПРОШЛЫЙ ГОД — данные резервов в рублях по месяцам (с бэкенда)
+const SERIES_BOILERS_PREV  = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyBoilersRubPrev));
+const SERIES_TURBINES_PREV = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTurbinesRubPrev));
+const SERIES_TOTAL_PREV    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTotalRubPrev));
+
+
+function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
+  const svg = d3.select('#'+svgId);
+  svg.selectAll('*').remove();
+
+  const W = 1000, H = 420;
+  const m = {top: 28, right: 24, bottom: 48, left: 80};
+  const innerW = W - m.left - m.right;
+  const innerH = H - m.top - m.bottom;
+
+  const x = d3.scalePoint().domain(MONTHS).range([0, innerW]).padding(0.5);
+
+  const allVals = [
+    ...seriesDefs.flatMap(s => s.values),
+    ...areaDefs.flatMap(a => a.values)
+  ];
+  // Учитываем и минимум, и максимум для поддержки отрицательных значений
+  const yMin = d3.min(allVals) || 0;
+  const yMax = d3.max(allVals) || 0;
+  // Добавляем отступ 10% с обеих сторон
+  const yPadding = Math.max(Math.abs(yMax), Math.abs(yMin)) * 0.1 || 1;
+  const y = d3.scaleLinear()
+    .domain([Math.min(yMin - yPadding, 0), Math.max(yMax + yPadding, 0)])
+    .nice()
+    .range([innerH, 0]);
+
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  // сетка и оси
+  g.append('g').attr('class','grid')
+    .call(d3.axisLeft(y).ticks(6).tickSize(-innerW).tickFormat(''));
+  g.append('g').attr('class','axis')
+    .call(d3.axisLeft(y).ticks(6).tickFormat(fmtMoneyShort));
+
+  // Горизонтальная ось X на уровне y=0 (линия нуля)
+  const y0 = y(0);
+  g.append('g').attr('class','axis axis-x-zero')
+    .attr('transform', `translate(0,${y0})`)
+    .call(d3.axisBottom(x).tickSize(0));
+
+  // Линия нуля (выделенная)
+  g.append('line')
+    .attr('x1', 0).attr('x2', innerW)
+    .attr('y1', y0).attr('y2', y0)
+    .attr('stroke', '#666').attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', '4 2');
+
+  // необязательная подпись оси Y (единицы)
+  g.append('text')
+    .attr('x', -m.left + 4).attr('y', -8)
+    .attr('fill', '#bdbdbd').attr('font-family','sans-serif').attr('font-size','12px')
+    .text(unitInfo.unitText);
+
+  const line = d3.line().x((_,i)=> x(MONTHS[i])).y(d => y(d)).curve(d3.curveMonotoneX);
+  // Область заливки от линии нуля до значения (работает и для отрицательных)
+  const area = d3.area().x((_,i)=> x(MONTHS[i])).y0(y(0)).y1(d => y(d)).curve(d3.curveMonotoneX);
+
+  // СНАЧАЛА — заливки прошлого года
+  areaDefs.forEach(a => {
+    g.append('path').datum(a.values).attr('class', a.areaClass).attr('d', area);
+  });
+
+  // ПОТОМ — линии текущего года
+  seriesDefs.forEach(s => {
+    g.append('path').datum(s.values).attr('class', s.lineClass).attr('d', line);
+  });
+
+  // точки текущего года
+  seriesDefs.forEach(s => {
+    g.selectAll('.'+s.dotClass)
+      .data(s.values.map((v,i)=> ({v,i})))
+      .enter().append('circle')
+        .attr('class', `dot ${s.dotClass}`)
+        .attr('r', 4.5)
+        .attr('cx', d=> x(MONTHS[d.i]))
+        .attr('cy', d=> y(d.v));
+  });
+
+  // фокус
+  const focusLine = g.append('line')
+    .attr('y1', 0).attr('y2', innerH)
+    .attr('stroke', '#4a4a4a').attr('stroke-dasharray', '4 4')
+    .style('opacity', 0);
+
+  const focusDots = seriesDefs.map(s =>
+    g.append('circle')
+      .attr('r', 6).attr('stroke','#fff').attr('stroke-width',2)
+      .attr('fill', s.focusFill)
+      .style('opacity', 0)
+  );
+
+  const tip = d3.select('#tooltip');
+
+  // оверлей
+  g.append('rect')
+    .attr('x', 0).attr('y', 0).attr('width', innerW).attr('height', innerH)
+    .attr('fill', 'transparent')
+    .on('mousemove', (event)=>{
+      const [mx] = d3.pointer(event);
+      // ближайший месяц
+      let idx = 0, best = Infinity;
+      for(let i=0;i<MONTHS.length;i++){
+        const xi = x(MONTHS[i]);
+        const d = Math.abs(mx - xi);
+        if (d < best){ best = d; idx = i; }
+      }
+      const xv = x(MONTHS[idx]);
+      focusLine.attr('x1',xv).attr('x2',xv).style('opacity',1);
+
+      focusDots.forEach((dot, k)=>{
+        const v = seriesDefs[k].values[idx];
+        dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
+      });
+
+      const val = unitInfo.formatVal;
+      tip.style('opacity',1)
+         .style('left', (event.pageX + 12) + 'px')
+         .style('top',  (event.pageY - 24) + 'px')
+         .html(`
+          <div style="font:12px sans-serif; color:#fff;">
+            <div style="color:#bdbdbd; margin-bottom:4px;"><b>${MONTHS[idx]}</b></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span>Котлы: ${val(seriesDefs[0].values[idx])} <span style="color:#b8dbff;">(прошл.: ${val(areaDefs[0].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${val(seriesDefs[1].values[idx])} <span style="color:#ffe47a;">(прошл.: ${val(areaDefs[1].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#EF4156;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${val(seriesDefs[2].values[idx])}</b> <span style="color:#EE5A6B;">(прошл.: ${val(areaDefs[2].values[idx])})</span></div>
+          </div>
+         `);
+    })
+    .on('mouseleave', ()=>{
+      focusLine.style('opacity',0);
+      focusDots.forEach(dot => dot.style('opacity',0));
+      tip.style('opacity',0);
+    });
+}
+/* ===== Настройки переключателей ===== */
+// Коэффициент перевода рубли→ТУТ для графиков (обратный: данные уже в рублях)
+// Если есть резервы в ТУТ и рублях, вычисляем средний курс; иначе дефолт 5000
+const RUB_PER_TUT = (RESERVES_TUT !== 0 && RESERVES_RUB !== 0) ? Math.abs(RESERVES_RUB / RESERVES_TUT) : 5000;
+let isRub = true;         // true = ₽ (по умолчанию, т.к. данные в рублях), false = ТУТ
+let isCum = false;        // false = помесячно, true = накопительно
+
+// Форматтеры
+const _fmtN = d3.format(',');
+const fmtIntSp = n => _fmtN(Math.round(n)).replace(/,/g,' ');
+function fmtMoneyShort(n){
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '−' : '';
+  if (abs >= 1e9)  return `${sign}${(abs/1e9).toFixed(1).replace('.', ',')} млрд`;
+  if (abs >= 1e6)  return `${sign}${(abs/1e6).toFixed(1).replace('.', ',')} млн`;
+  if (abs >= 1e3)  return `${sign}${(abs/1e3).toFixed(1).replace('.', ',')} тыс`;
+  return `${sign}${fmtIntSp(abs)}`;
+}
+
+// Преобразования
+const toCum = arr => arr.reduce((acc,v,i)=> (acc[i]=(i?acc[i-1]:0)+v, acc), []);
+// Данные уже в рублях, для ТУТ делим на курс
+const toTut = arr => arr.map(v => RUB_PER_TUT > 0 ? v / RUB_PER_TUT : 0);
+
+// Применить текущие тумблеры к данным (возвращает новые массивы)
+function transformAll(){
+  let b = SERIES_BOILERS.slice();
+  let t = SERIES_TURBINES.slice();
+  let s = SERIES_TOTAL.slice();
+
+  let bp = SERIES_BOILERS_PREV.slice();
+  let tp = SERIES_TURBINES_PREV.slice();
+  let sp = SERIES_TOTAL_PREV.slice();
+
+  // Если режим ТУТ — конвертируем из рублей в ТУТ
+  if (!isRub){
+    b = toTut(b); t = toTut(t); s = toTut(s);
+    bp = toTut(bp); tp = toTut(tp); sp = toTut(sp);
+  }
+
+  if (isCum){
+    b = toCum(b); t = toCum(t); s = toCum(s);
+    bp = toCum(bp); tp = toCum(tp); sp = toCum(sp);
+  }
+  return { b,t,s,bp,tp,sp };
+}
+
+// Перерисовка с учётом тумблеров
+function rerender(){
+  const { b,t,s,bp,tp,sp } = transformAll();
+
+  // Обновим подпись единиц у оси/подсказок
+  const unitInfo = {
+    unitText: isRub ? '₽' : 'ТУТ',
+    formatVal(v){
+      return isRub ? `₽ ${fmtMoneyShort(v)}` : `${fmtIntSp(v)} ТУТ`;
+    }
+  };
+
+  // Рисуем (замени ниже вызов на твой drawMultiLine с поддержкой unitText/formatVal в тултипе)
+  drawMultiLineEnhanced('line-multi',
+    [
+      { title:'Котлы',   values: b, lineClass:'line-boilers',  dotClass:'dot-boilers',  focusFill:'#74c0ff' },
+      { title:'Турбины', values: t, lineClass:'line-turbines', dotClass:'dot-turbines', focusFill:'#ffd400' },
+      { title:'Итоги',   values: s, lineClass:'line-total',    dotClass:'dot-total',    focusFill:'#EF4156' },
+    ],
+    [
+      { title:'Котлы (прошл.)',   values: bp, areaClass:'area-boilers-prev'  },
+      { title:'Турбины (прошл.)', values: tp, areaClass:'area-turbines-prev' },
+      { title:'Итоги (прошл.)',   values: sp, areaClass:'area-total-prev'    },
+    ],
+    unitInfo
+  );
+
+  // Обновить подпись возле тумблера валюты
+  document.getElementById('label-currency').textContent = isRub ? '₽' : 'ТУТ';
+}
+
+// Слушатели тумблеров
+document.getElementById('toggle-currency').addEventListener('change', e=>{
+  isRub = e.target.checked;
+  rerender();
+});
+document.getElementById('toggle-cum').addEventListener('change', e=>{
+  isCum = e.target.checked;
+  rerender();
+});
+
+// Первый рендер
+rerender();
+
+</script>
+</div>
+</body>
