@@ -1541,16 +1541,19 @@ function fmtMoneyShort(n){
 const toCum = arr => arr.reduce((acc,v,i)=> (acc[i]=(i?acc[i-1]:0)+v, acc), []);
 // Данные уже в рублях, для ТУТ делим на курс
 const toTut = arr => arr.map(v => RUB_PER_TUT > 0 ? v / RUB_PER_TUT : 0);
+// Инвертирование значений (экономия = положительное, перерасход = отрицательное)
+const invert = arr => arr.map(v => -v);
 
 // Применить текущие тумблеры к данным (возвращает новые массивы)
 function transformAll(){
-  let b = SERIES_BOILERS.slice();
-  let t = SERIES_TURBINES.slice();
-  let s = SERIES_TOTAL.slice();
+  // Инвертируем все значения (* -1)
+  let b = invert(SERIES_BOILERS);
+  let t = invert(SERIES_TURBINES);
+  let s = invert(SERIES_TOTAL);
 
-  let bp = SERIES_BOILERS_PREV.slice();
-  let tp = SERIES_TURBINES_PREV.slice();
-  let sp = SERIES_TOTAL_PREV.slice();
+  let bp = invert(SERIES_BOILERS_PREV);
+  let tp = invert(SERIES_TURBINES_PREV);
+  let sp = invert(SERIES_TOTAL_PREV);
 
   // Если режим ТУТ — конвертируем из рублей в ТУТ
   if (!isRub){
