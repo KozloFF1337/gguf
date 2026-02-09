@@ -1419,24 +1419,37 @@ function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
     .attr('fill', '#bdbdbd').attr('font-family','sans-serif').attr('font-size','12px')
     .text(unitInfo.unitText);
 
-  const line = d3.line().x((_,i)=> x(MONTHS[i])).y(d => y(d)).curve(d3.curveMonotoneX);
+  // Функция проверки наличия данных (0 = нет данных)
+  const hasData = v => v !== 0;
+
+  // Линия с разрывами где нет данных
+  const line = d3.line()
+    .defined(hasData)
+    .x((_,i)=> x(MONTHS[i]))
+    .y(d => y(d))
+    .curve(d3.curveMonotoneX);
+
   // Область заливки от линии нуля до значения (работает и для отрицательных)
-  const area = d3.area().x((_,i)=> x(MONTHS[i])).y0(y(0)).y1(d => y(d)).curve(d3.curveMonotoneX);
+  const area = d3.area()
+    .x((_,i)=> x(MONTHS[i]))
+    .y0(y(0))
+    .y1(d => y(d))
+    .curve(d3.curveMonotoneX);
 
   // СНАЧАЛА — заливки прошлого года
   areaDefs.forEach(a => {
     g.append('path').datum(a.values).attr('class', a.areaClass).attr('d', area);
   });
 
-  // ПОТОМ — линии текущего года
+  // ПОТОМ — линии текущего года (с разрывами)
   seriesDefs.forEach(s => {
     g.append('path').datum(s.values).attr('class', s.lineClass).attr('d', line);
   });
 
-  // точки текущего года
+  // точки текущего года (только где есть данные)
   seriesDefs.forEach(s => {
     g.selectAll('.'+s.dotClass)
-      .data(s.values.map((v,i)=> ({v,i})))
+      .data(s.values.map((v,i)=> ({v,i})).filter(d => hasData(d.v)))
       .enter().append('circle')
         .attr('class', `dot ${s.dotClass}`)
         .attr('r', 4.5)
@@ -1477,19 +1490,25 @@ function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
 
       focusDots.forEach((dot, k)=>{
         const v = seriesDefs[k].values[idx];
-        dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
+        // Не показываем точку если данных нет (v === 0)
+        if (v !== 0) {
+          dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
+        } else {
+          dot.style('opacity',0);
+        }
       });
 
       const val = unitInfo.formatVal;
+      const fmtVal = (v) => v === 0 ? '<span style="color:#666;">нет данных</span>' : val(v);
       tip.style('opacity',1)
          .style('left', (event.pageX + 12) + 'px')
          .style('top',  (event.pageY - 24) + 'px')
          .html(`
           <div style="font:12px sans-serif; color:#fff;">
             <div style="color:#bdbdbd; margin-bottom:4px;"><b>${MONTHS[idx]}</b></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span>Котлы: ${val(seriesDefs[0].values[idx])} <span style="color:#b8dbff;">(прошл.: ${val(areaDefs[0].values[idx])})</span></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${val(seriesDefs[1].values[idx])} <span style="color:#ffe47a;">(прошл.: ${val(areaDefs[1].values[idx])})</span></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#EF4156;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${val(seriesDefs[2].values[idx])}</b> <span style="color:#EE5A6B;">(прошл.: ${val(areaDefs[2].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span>Котлы: ${fmtVal(seriesDefs[0].values[idx])} <span style="color:#b8dbff;">(прошл.: ${fmtVal(areaDefs[0].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${fmtVal(seriesDefs[1].values[idx])} <span style="color:#ffe47a;">(прошл.: ${fmtVal(areaDefs[1].values[idx])})</span></div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#EF4156;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${fmtVal(seriesDefs[2].values[idx])}</b> <span style="color:#EE5A6B;">(прошл.: ${fmtVal(areaDefs[2].values[idx])})</span></div>
           </div>
          `);
     })
