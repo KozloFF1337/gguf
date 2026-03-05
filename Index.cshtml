@@ -1015,9 +1015,8 @@
                 ? turbines.reduce((acc, d) => acc + d.urt_percent * d.size, 0) / turbineWeightSum
                 : 0;
 
-            // Итоговая формула: ((100 + boilerRating) / (100 - turbineRating) - 1) * 100
-            // turbineRating > 0 = перерасход → знаменатель уменьшается → рейтинг растёт (показывает резерв)
-            return ((100 + boilerRating) / (100 - turbineRating) - 1) * 100;
+            // Итоговая формула: ((100 + boilerRating) / (100 + turbineRating) - 1) * 100
+            return ((100 + boilerRating) / (100 + turbineRating) - 1) * 100;
         }
 
         // ... (весь предыдущий код остается без изменений до создания рейтинга)

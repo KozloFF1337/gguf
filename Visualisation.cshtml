@@ -1,4 +1,5 @@
-@using Newtonsoft.Json; 
+@using Newtonsoft.Json;
+@using Altair.Services;
 
 @{
     ViewData["Title"] = "Альтаир Рейтинг";
@@ -12,19 +13,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         .rating-container {
-        margin-left: 5px;
-        margin-bottom: 5px;
-        width: calc(12% + 40px);
-        float: left;
-        padding: 10px;
+        position: fixed;
+        top: 60px;
+        right: 0;
+        bottom: 45px;
+        width: 200px;
+        padding: 8px;
         padding-top: 0;
         background-color: #222;
-        color: #fff;
-        border-radius: 10px;
+        color: white;
+        border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         font-family: sans-serif;
-        font-size: 14px;
-        line-height: 1.4;
+        line-height: 1.2;
+        overflow: hidden;
+        z-index: 100;
         }
     body {
         display: flex;
@@ -37,10 +40,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding: 10px;
+    margin-bottom: 0.32em;
+    padding: 0.45em;
     background-color: #333;
-    border-radius: 5px;
+    border-radius: 4px;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease;
     cursor: pointer;
@@ -49,63 +52,81 @@
         display: flex;
         align-items: center;
         flex-grow: 1;
+        overflow: hidden;
+        white-space: nowrap;
     }
     .radio-btn {
-        margin-left: 10px;
+        margin-left: 0.5em;
         cursor: pointer;
         transform: scale(1);
         transform-origin: center;
     }
     .radio-btn input {
         cursor: pointer;
+        width: 1em;
+        height: 1em;
+    }
+    .toggle-all-btn {
+        background: #444;
+        border: 1px solid #666;
+        border-radius: 4px;
+        color: #ddd;
+        padding: 0.1em 0.4em;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .toggle-all-btn:hover {
+        background: #555;
+        border-color: #888;
     }
     .rating-card:nth-child(even) {
         background-color: #2a2a2a;
     }
     .rank-number {
         font-weight: bold;
-        color: #fff;
-        font-size: 16px;
-        margin-right: 10px;
+        color: white;
+        font-size: 1em;
+        margin-right: 0.5em;
     }
     .user-name {
         font-style: normal;
-        font-size: 16px;
+        font-size: 1em;
         color: #dddddd;
     }
     .score-value-0 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #5d5d5d;
     }
     .score-value-1 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #8B0000;
     }
     .score-value-2 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #c5172c;
     }
     .score-value-3 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #FF0000;
     }
     .score-value-4 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #009F00;
     }
     .score-value-5 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #006400;
     }    
@@ -128,7 +149,7 @@
     .rating-card:hover {
         transform: scale(1.02);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        background-color: #3a3a3a !important;
+        background-color: #444 !important;
     }
 
     .main-container {
@@ -142,10 +163,10 @@
             }
 
     h2 {
-            color: #dddddd;    
-            font-size: 30px;    
-            margin-top: 0;    
-            margin-bottom: 4px;    
+            color: #dddddd;
+            font-size: 30px;
+            margin-top: 0;
+            margin-bottom: 4px;
             display: inline-block; /* Чтобы text-align:center работал правильно */
             }
 
@@ -163,13 +184,12 @@
     select {
     width: 90px;
     height: 40px;
-    border: none;
+    border: 1px solid #444;
     border-radius: 5px;
     background-color: #333;
-    color: #b3b3b3;
+    color: #dddddd;
     font-size: 16px;
     text-align: center;
-    color: #dddddd;
     padding: 0 0px;
     cursor: pointer;
     transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
@@ -184,10 +204,27 @@
         outline: none;
         box-shadow: 0 0 5px rgba(253, 129, 126, 0.5);
     }
+
     </style>
 </head>
 <body>
-    <div style="margin-top: 5px;">
+    <div style="margin-top: 5px; margin-right: 210px;">
+        <!-- Вкладки период и дата на отдельной строке -->
+        <div style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; background-color: #222; border-radius: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span style="color: #dddddd; font-size: 16px; font-weight: bold;">Период:</span>
+                <select id="periodSelect" onchange="onPeriodChange()">
+                    <option value="day">День</option>
+                    <option value="month">Месяц</option>
+                    <option value="year">Год</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <span style="color: #dddddd; font-size: 16px; font-weight: bold;">Дата:</span>
+                <select id="dateSelect" onchange="reloadPage()" style="min-width: 150px;"></select>
+            </div>
+        </div>
+
         <div style="display:flex; width: 100%;"> <!-- Добавил width: 100% -->
             <div style="flex: 1; display: flex; flex-direction: column;"> <!-- Изменил структуру -->
                 <div class="graph-container" id="treemap-left" style="text-align: center;">
@@ -197,32 +234,107 @@
                     <h2 style="margin-bottom: 4px; display: inline-block;">Турбины</h2>
                 </div>
             </div>
-            <div class="rating-container">
-                <div><h2 style="margin-bottom: 10px;margin-top: 5px;">Рейтинг:</h2><select style="float: right;margin-top: 5px;" id="periodSelect" onchange="reloadPage()">
-                    <option value="week">Неделя</option>
-                    <option value="month">Месяц</option>
-                    <option value="year">Год</option>
-                </select> </div>
             </div>
         </div>
     </div>
-    
-    <div id="tooltip" class="tooltip"></div> <!-- Специальный элемент для всплывающей подсказки -->
+    <div class="rating-container" id="rating-container-vis">
+        <div class="rating-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; margin-top: 5px;">
+            <h2 style="margin: 0; font-size: 14px;">Рейтинг:</h2>
+            <button id="toggle-all-vis" class="toggle-all-btn" title="Выбрать/Снять все" style="font-size: 14px; padding: 2px 8px;">☑</button>
+        </div>
+        <div class="rating-cards-wrapper" id="rating-cards-vis"></div>
+    </div>
+
+    <div id="tooltip" class="tooltip"></div>
 
     <script>
-    const select = document.getElementById('periodSelect');
-    const tempData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Turbins));
-    if (tempData[0].PeriodType === 0)
-      select.value = 'week';
-    if (tempData[0].PeriodType === 1)
-      select.value = 'month';
-    if (tempData[0].PeriodType === 2)
-      select.value = 'year';
-        function reloadPage() {
-            const selectedPeriod = document.getElementById('periodSelect').value;
-            const url = `@Url.Action("Visualisation", "Home")?selectedPeriod=${selectedPeriod}`;
-            window.location.href = url;
+    // Текущее состояние из модели
+    const currentPeriodType = @((int)Model.SelectedPeriod);
+    const currentSelectedDate = '@(Model.SelectedDate?.ToString("yyyy-MM-dd") ?? "")';
+
+    const periodSelect = document.getElementById('periodSelect');
+    const dateSelect = document.getElementById('dateSelect');
+
+    // Устанавливаем текущий тип периода
+    if (currentPeriodType === 0) periodSelect.value = 'day';
+    else if (currentPeriodType === 1) periodSelect.value = 'month';
+    else if (currentPeriodType === 2) periodSelect.value = 'year';
+
+    // Загружаем доступные даты при загрузке страницы
+    document.addEventListener('DOMContentLoaded', () => loadAvailableDates());
+
+    async function loadAvailableDates() {
+        const period = periodSelect.value;
+        let url = '';
+
+        if (period === 'day') {
+            url = '/api/Data/available-days';
+        } else if (period === 'month') {
+            url = '/api/Data/available-months';
+        } else {
+            url = '/api/Data/available-years';
         }
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+
+            dateSelect.innerHTML = '';
+
+            if (period === 'year') {
+                // Для года показываем только годы с данными из API
+                if (data.years && data.years.length > 0) {
+                    data.years.forEach(y => {
+                        const opt = document.createElement('option');
+                        opt.value = y.date;
+                        opt.textContent = y.displayText;
+                        dateSelect.appendChild(opt);
+                    });
+                }
+            } else {
+                if (data.dates) {
+                    data.dates.forEach(d => {
+                        const option = document.createElement('option');
+                        option.value = d.date;
+                        option.textContent = d.displayText;
+                        dateSelect.appendChild(option);
+                    });
+                }
+            }
+
+            if (currentSelectedDate && dateSelect.querySelector(`option[value="${currentSelectedDate}"]`)) {
+                dateSelect.value = currentSelectedDate;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки дат:', error);
+        }
+    }
+
+    function onPeriodChange() {
+        loadAvailableDates().then(() => {
+            if (dateSelect.options.length > 0) {
+                reloadPage();
+            }
+        });
+    }
+
+    function reloadPage() {
+        const selectedPeriod = periodSelect.value;
+        const selectedDate = dateSelect.value;
+        // Сохраняем в localStorage для синхронизации между вкладками
+        localStorage.setItem('selectedPeriod', selectedPeriod);
+        if (selectedDate) {
+            localStorage.setItem('selectedDate', selectedDate);
+        } else {
+            localStorage.removeItem('selectedDate');
+        }
+        let url = `@Url.Action("Visualisation", "Home")?selectedPeriod=${selectedPeriod}`;
+        if (selectedDate) {
+            url += `&selectedDate=${selectedDate}`;
+        }
+        window.location.href = url;
+    }
+
     </script>
 
     <script>
@@ -248,10 +360,24 @@
             18: `НТЭЦ-3`,
             19: `НТЭЦ-4`,
             20: `НТЭЦ-5`,
-            21: `БбТЭЦ`
+            21: `БбТЭЦ`,
+            5: `КемГРЭС`
         };
 
+        // Станции типа ТЭЦ + КемГРЭС (для исключения турбин из рейтинга)
+        const tecStations = [14, 3, 6, 7, 22, 4, 2, 12, 13, 8, 10, 17, 18, 19, 20, 21, 5];
 
+        // Читаем настройку исключения турбин ТЭЦ из localStorage (по умолчанию true)
+        const excludeTecFromUrl = localStorage.getItem('excludeTecTurbines') !== 'false';
+        const excludeTecTurbinesFlag = excludeTecFromUrl;
+
+        // Читаем состояние выбора оборудования из localStorage
+        const _eqStateRaw = (() => {
+            try { return JSON.parse(localStorage.getItem('equipmentSelectionState') || '{}'); }
+            catch(e) { return {}; }
+        })();
+        const eqTurbines = _eqStateRaw.turbines || {};
+        const eqBoilers  = _eqStateRaw.boilers  || {};
 
         const stationLinks = {
             25: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%AD%D0%A1',   // для Рефтинской
@@ -278,641 +404,89 @@
             21: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%91%D0%B1%D0%A2%D0%AD%D0%A6',
             5: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%9A%D0%B5%D0%BC%D0%93%D0%A0%D0%AD%D0%A1'
         };
-        const rgres_kpdvalues = {
-            "01А": 90.28,
-            "01Б": 89.9,
-            "02А": 91.41,
-            "02Б": 91.28,
-            "03А": 90.07,
-            "03Б": 89.37,
-            "04А": 92.08,
-            "04Б": 91.85,
-            "05А": 91.63,
-            "05Б": 91.7,
-            "06А": 88.28,
-            "06Б": 88.54,
-            "07": 91.37,
-            "08": 91.68,
-            "09": 90.61,
-            "10": 90.42
-        };
-        const rgres_urtvalues = {
-            "1": 1930.4,
-            "2": 2006.3,
-            "3": 1966.9,
-            "4": 1941.6,
-            "5": 1880.3,
-            "6": 1949.3,
-            "7": 1982.2,
-            "8": 1950.7,
-            "9": 1932.2,
-            "10": 1925.7
-        };
-        const tugres_kpdvalues = {
-            "01": 90.86,
-            "02": 90.93,
-            "03": 90.94,
-            "04": 90.18,
-            "05": 90.95,
-            "06": 90.8,
-            "07": 88.76,
-            "08": 88.36,
-            "09": 89.21,
-            "10": 89.9,
-            "11": 90.92,
-            "12": 91.16,
-            "13А": 90.66,
-            "13Б": 91.83,
-            "14А": 89.32,
-            "14Б": 90.77
-        };
-        const tugres_urtvalues = {
-            "1": 2476,
-            "2": 2295,
-            "3": 2282,
-            "4": 2142,
-            "5": 2110,
-            "6": 2058,
-            "7": 2031,
-            "8": 2148,
-            "9": 2081
-        };
-        const bgres_kpdvalues = {
-            "01А": 90.6,
-            "01Б": 90.15,
-            "02А": 90.26,
-            "02Б": 90.79,
-            "03А": 89.86,
-            "03Б": 90.62,
-            "04А": 89.97,
-            "04Б": 88.92,
-            "05А": 90.25,
-            "05Б": 90.32,
-            "06А": 89.45,
-            "06Б": 89.03
-        };
-        const bgres_urtvalues = {
-            "1": 2004,
-            "2": 2060,
-            "3": 2048,
-            "4": 2039,
-            "5": 2102,
-            "6": 1953
-        };
-        const ngres_kpdvalues = {
-            "01А": 91.73,
-            "01Б": 89.06,
-            "02А": 87.93,
-            "02Б": 88.18,
-            "03А": 90.46,
-            "03Б": 90.91,
-            "04А": 91.06,
-            "04Б": 89.07,
-            "05А": 89.48,
-            "05Б": 87.58,
-            "06А": 89.85,
-            "06Б": 88.58,
-            "07А": 87.92,
-            "07Б": 88.93
-        };
-        const ngres_urtvalues = {
-            "1": 2360.8,
-            "2": 2176.66,
-            "3": 2261.85,
-            "4": 2225.64,
-            "5": 2295.6,
-            "6": 2280.1,
-            "7": 1934
-        };
-        const kgres2_kpdvalues = {
-            "01А": 91.42,
-            "01Б": 91.77,
-            "02А": 91.58,
-            "02Б": 91.97,
-            "03А": 91.58, //нет данных
-            "03Б": 91.97, //нет данных
-            "04А": 91.7,
-            "04Б": 89.54,
-            "05А": 89.13,
-            "05Б": 91.73,
-            "06А": 91.9,
-            "06Б": 92.03,
-            "07А": 91.89,
-            "07Б": 91.56,
-            "08А": 92.55,
-            "08Б": 91.72,
-            "09А": 89.93, //нет данных
-            "09Б": 89.93,
-            "10А": 90.38,
-            "10Б": 88.83
-        };
-        const kgres2_urtvalues = {
-            "1": 2198.3,
-            "2": 2228.8,
-            "3": 2228.8, //нет данных
-            "4": 2228.8, //нет данных
-            "5": 1833.3,
-            "6": 2174.5,
-            "7": 2174.5, //нет данных
-            "8": 2085.2,
-            "9": 2423.6,
-            "10": 2423.6 //нет данных
-        };
-        const pgres_kpdvalues = {
-            "01А": 84.35,
-            "01Б": 83.62,
-            "02А": 83.62, //нет данных
-            "02Б": 83.62, //нет данных
-            "03А": 83.62, //нет данных
-            "03Б": 83.62, //нет данных
-            "04А": 83.7,
-            "04Б": 84.7,
-            "05": 87.14,
-            "06": 87.14, //нет данных
-            "07": 87.14, //нет данных
-            "08": 78.4,
-            "09": 83.62 //нет данных
-        };
-        const pgres_urtvalues = {
-            "1": 2252.83,
-            "2": 2252.83, //нет данных
-            "3": 2252.83, //нет данных
-            "4": 2371,
-            "5": 2089,
-            "6": 2005.5, 
-            "7": 1986.2, //нет данных
-            "8": 1986.2,
-            "9": 1914.2
-        };
 
-                // ============ НОРМАТИВНЫЕ ЗНАЧЕНИЯ ИЗ EXCEL ФАЙЛА ============
-        // (С АВТОМАТИЧЕСКИМ ЗАПОЛНЕНИЕМ ПРОПУСКОВ ПО ПРЕДЫДУЩИМ ЗНАЧЕНИЯМ)
-        // КЛЮЧИ В КПД: двухзначный формат (01, 02, 03...)
-        // БиТЭЦ и БбТЭЦ: добавлен символ М к номеру котла (01М, 02М, 03М...)
+        // ============ НОРМАТИВНЫЕ ЗНАЧЕНИЯ КПД И УРТ ============
+        // Загружаются динамически из файла normative_config.xlsx через сервис NormativeValues
+        // Для изменения значений используйте страницу Параметры -> Нормативные значения КПД и УРТ
 
-        // КрТЭЦ-2 (ID: 2) - лист КТЭЦ-2
-        const krtec2_kpdvalues = {
-            "01": 91.85,
-            "02": 92.69,
-            "03": 91.6,
-            "04": 90.62,
-            "05": 91.13,
-            "06": 90.86
-        };
-        const krtec2_urtvalues = {
-            "01": 1994.7,
-            "02": 1261.1,
-            "03": 1208.2,
-            "04": 1208.2 // н/д → заполнено из котла/турбины №3
-        };
+        const kpdvalues = @Html.Raw(NormativeValues.GetKpdValuesAsJson());
 
-        // НкТЭЦ (ID: 3) - лист НКТЭЦ
-        const nktec_kpdvalues = {
-            "08": 91.09,
-            "09": 90.96,
-            "10": 90.7,
-            "11": 91.8,
-            "12": 90.45,
-            "13": 90.73,
-            "14": 91.19,
-            "15": 90.4,
-            "16": 91.37
-        };
-        const nktec_urtvalues = {
-            "07": 900.0,
-            "09": 884.4,
-            "11": 2017.0,
-            "12": 1945.0,
-            "13": 896.0,
-            "14": 1683.0,
-            "15": 2199.0
-        };
+        const urtvalues = @Html.Raw(NormativeValues.GetUrtValuesAsJson());
 
-        // КрТЭЦ-1 (ID: 4) - лист КТЭЦ-1
-        const krtec1_kpdvalues = {
-            "04": 89.08,
-            "05": 90.41,
-            "06": 88.42,
-            "07": 89.43,
-            "08": 88.43,
-            "09": 90.56,
-            "10": 90.43,
-            "12": 89.32,
-            "13": 90.11,
-            "14": 89.65,
-            "15": 90.03,
-            "16": 90.05,
-            "18": 90.83
-        };
-        const krtec1_urtvalues = {
-            "03": 2963.7,
-            "04": 2963.7, // н/д → заполнено из котла/турбины №3
-            "05": 2963.7, // н/д → заполнено из котла/турбины №4
-            "06": 2905.6,
-            "07": 2905.6, // н/д → заполнено из котла/турбины №6
-            "08": 2905.6, // н/д → заполнено из котла/турбины №7
-            "09": 1839.0,
-            "10": 1839.0, // н/д → заполнено из котла/турбины №9
-            "11": 898.4,
-            "12": 898.4 // н/д → заполнено из котла/турбины №11
-        };
+        // Метаданные КПД: дата КР/СР и примечание для каждого котла
+        const kpdmeta = @Html.Raw(NormativeValues.GetKpdMetaAsJson());
 
-        // БарТЭЦ-2 (ID: 6) - лист БТЭЦ-2
-        const bartec2_kpdvalues = {
-            "06": 91.49,
-            "07": 91.44,
-            "10": 91.45,
-            "11": 91.82,
-            "12": 91.78,
-            "13": 91.59,
-            "14": 92.33,
-            "15": 92.28,
-            "16": 91.2,
-            "17": 91.58,
-            "18": 90.55
-        };
-        const bartec2_urtvalues = {
-            "05": 1025.0,
-            "06": 986.0,
-            "07": 1031.0,
-            "08": 2239.0,
-            "09": 2260.0
-        };
+        // Метаданные УРТ: дата КР/СР и примечание для каждой турбины
+        const urtmeta = @Html.Raw(NormativeValues.GetUrtMetaAsJson());
 
-        // БарТЭЦ-3 (ID: 7) - лист БТЭЦ-3
-        const bartec3_kpdvalues = {
-            "01": 91.65,
-            "02": 92.08,
-            "03": 91.87,
-            "04": 92.02,
-            "05": 91.55
-        };
-        const bartec3_urtvalues = {
-            "01": 1195.0,
-            "02": 1070.0,
-            "03": 1147.0
-        };
-
-        // АбТЭЦ (ID: 8) - лист АТЭЦ
-        const abtec_kpdvalues = {
-            "01": 90.25,
-            "02": 91.9,
-            "03": 91.55,
-            "04": 92.61,
-            "05": 90.86
-        };
-        const abtec_urtvalues = {
-            "01": 2366.9,
-            "02": 2230.5,
-            "03": 2227.8,
-            "04": 2064.1
-        };
-
-        // МинТЭЦ (ID: 10) - лист МТЭЦ
-        const mintec_kpdvalues = {
-            "75": 91.46,
-            "420": 91.92
-        };
-        const mintec_urtvalues = {
-            "01": 2214.4
-        };
-
-        // КрТЭЦ-3 (ID: 12) - лист КТЭЦ-3
-        const krtec3_kpdvalues = {
-            "100": 91.03,
-            "216": 92.22
-        };
-        const krtec3_urtvalues = {
-        };
-
-        // КанТЭЦ (ID: 13) - лист КанТЭЦ
-        const kantec_kpdvalues = {
-            "02": 93.26,
-            "03": 93.47,
-            "04": 92.74,
-            "05": 93.44,
-            "06": 92.82,
-            "07": 93.16
-        };
-        const kantec_urtvalues = {
-            "01": 3565.2,
-            "02": 969.3
-        };
-
-        // КемТЭЦ (ID: 14) - лист КемТЭЦ
-        const kemtec_kpdvalues = {
-            "01": 86.61,
-            "05": 87.3,
-            "08": 87.43,
-            "09": 88.28,
-            "10": 90.76,
-            "11": 90.68
-        };
-        const kemtec_urtvalues = {
-            "02": 1034.0,
-            "03": 1007.0,
-            "04": 956.0,
-            "07": 975.0
-        };
-
-        // НТЭЦ-2 (ID: 17) - лист НТЭЦ-2
-        const ntec2_kpdvalues = {
-            "04": 87.35,
-            "05": 88.93,
-            "06": 89.54,
-            "07": 91.38,
-            "08": 91.96,
-            "09": 91.34,
-            "10": 92.21
-        };
-        const ntec2_urtvalues = {
-            "03": 3201.9,
-            "04": 3201.9, // н/д → заполнено из котла/турбины №3
-            "05": 3740.3,
-            "06": 2329.6,
-            "07": 2341.6,
-            "08": 2582.7,
-            "09": 2576.7
-        };
-
-        // НТЭЦ-3 (ID: 18) - лист НТЭЦ-3
-        const ntec3_kpdvalues = {
-            "07": 89.53,
-            "08": 89.18,
-            "09": 90.97,
-            "10": 91.02,
-            "11": 90.87,
-            "12": 90.43,
-            "13": 90.7,
-            "14": 91.43
-        };
-        const ntec3_urtvalues = {
-            "01": 3245.5,
-            "07": 1043.0,
-            "09": 854.2,
-            "10": 860.3,
-            "11": 2264.9,
-            "12": 2253.1,
-            "13": 2194.8,
-            "14": 2183.1
-        };
-
-        // НТЭЦ-4 (ID: 19) - лист НТЭЦ-4
-        const ntec4_kpdvalues = {
-            "05": 88.65,
-            "06": 90.81,
-            "07": 91.71,
-            "08": 87.96,
-            "09": 90.69,
-            "10": 91.77,
-            "11": 89.92,
-            "12": 89.77
-        };
-        const ntec4_urtvalues = {
-            "04": 3159.9,
-            "05": 3273.9,
-            "06": 2235.5,
-            "07": 2238.1,
-            "08": 2320.2
-        };
-
-        // НТЭЦ-5 (ID: 20) - лист НТЭЦ-5
-        const ntec5_kpdvalues = {
-            "01": 90.81,
-            "02": 91.04,
-            "03": 90.66,
-            "04": 89.83,
-            "05": 90.62,
-            "06": 90.21
-        };
-        const ntec5_urtvalues = {
-            "01": 2115.7,
-            "02": 2089.4,
-            "03": 2145.3,
-            "04": 2141.1,
-            "05": 2139.7,
-            "06": 2136.4
-        };
-
-        // БбТЭЦ (ID: 21) - лист БТЭЦ (Барабинская ТЭЦ)
-        const bbtec_kpdvalues = {
-            "01М": 90.13,
-            "02М": 91.73,
-            "03М": 92.23,
-            "04М": 90.17,
-            "05М": 89.84
-        };
-        const bbtec_urtvalues = {
-            "02": 3290.0,
-            "03": 1387.0,
-            "04": 1387.0, // н/д → заполнено из котла/турбины №3
-            "05": 1387.0 // н/д → заполнено из котла/турбины №4
-        };
-
-        // БиТЭЦ (ID: 22) - лист БТЭЦ-1 (Бийская ТЭЦ)
-        const bitec_kpdvalues = {
-            "07М": 92.2,
-            "10М": 91.76,
-            "11М": 90.9,
-            "12М": 92.54,
-            "13М": 92.38,
-            "14М": 91.72,
-            "15М": 91.42,
-            "16М": 90.91
-        };
-        const bitec_urtvalues = {
-            "01": 989.1,
-            "04": 1602.7,
-            "06": 1702.4,
-            "07": 1710.1
-        };
-
-        const test_kpdvalues = {
-            "01M": 0,
-            "02M": 0, //нет данных
-            "03M": 0, //нет данных
-            "04M": 0,
-            "05M": 0,
-            "06M": 0, 
-            "07M": 0, //нет данных
-            "08M": 0,
-            "09M": 0,
-            "10M": 0,
-            "11M": 0, //нет данных
-            "12M": 0,
-            "13M": 0, //нет данных
-            "14M": 0,
-            "15M": 0,
-            "16M": 0, 
-            "17M": 0, //нет данных
-            "18M": 0,
-            "19M": 0,
-            "01М": 0,
-            "02М": 0, //нет данных
-            "03М": 0, //нет данных
-            "04М": 0,
-            "05М": 0,
-            "06М": 0, 
-            "07М": 0, //нет данных
-            "08М": 0,
-            "09М": 0,
-            "10М": 0,
-            "11М": 0, //нет данных
-            "12М": 0,
-            "13М": 0, //нет данных
-            "14М": 0,
-            "15М": 0,
-            "16М": 0, 
-            "17М": 0, //нет данных
-            "18М": 0,
-            "19М": 0,
-            "01": 0,
-            "02": 0, //нет данных
-            "03": 0, //нет данных
-            "04": 0,
-            "05": 0,
-            "06": 0, 
-            "07": 0, //нет данных
-            "08": 0,
-            "09": 0,
-            "10": 0,
-            "11": 0, //нет данных
-            "12": 0,
-            "13": 0, //нет данных
-            "14": 0,
-            "15": 0,
-            "16": 0, 
-            "17": 0, //нет данных
-            "18": 0,
-            "19": 0,
-            "01А": 0,
-            "02А": 0, //нет данных
-            "03А": 0, //нет данных
-            "04А": 0,
-            "05А": 0,
-            "06А": 0, 
-            "07А": 0, //нет данных
-            "08А": 0,
-            "09А": 0,
-            "10А": 0,
-            "11А": 0, //нет данных
-            "12А": 0,
-            "13А": 0, //нет данных
-            "14А": 0,
-            "15А": 0,
-            "16А": 0, 
-            "17А": 0, //нет данных
-            "18А": 0,
-            "19А": 0,
-            "01Б": 0,
-            "02Б": 0, //нет данных
-            "03Б": 0, //нет данных
-            "04Б": 0,
-            "05Б": 0,
-            "06Б": 0, 
-            "07Б": 0, //нет данных
-            "08Б": 0,
-            "09Б": 0,
-            "10Б": 0,
-            "11Б": 0, //нет данных
-            "12Б": 0,
-            "13Б": 0, //нет данных
-            "14Б": 0,
-            "15Б": 0,
-            "16Б": 0, 
-            "17Б": 0, //нет данных
-            "18Б": 0,
-            "19Б": 0
-        };
-        const test_urtvalues = {
-            "1": 0,
-            "2": 0, //нет данных
-            "3": 0, //нет данных
-            "4": 0,
-            "5": 0,
-            "6": 0, 
-            "7": 0, //нет данных
-            "8": 0,
-            "9": 0,
-            "10": 0,
-            "11": 0, //нет данных
-            "12": 0,
-            "13": 0, //нет данных
-            "14": 0,
-            "15": 0,
-            "16": 0, 
-            "17": 0, //нет данных
-            "18": 0,
-            "19": 0
-        };
-
-        
-        const kpdvalues = {
-            25: rgres_kpdvalues,      // РефГРЭС
-            9: tugres_kpdvalues,      // ТуГРЭС
-            15: bgres_kpdvalues,      // БелГРЭС
-            1: ngres_kpdvalues,       // НазГРЭС
-            24: kgres2_kpdvalues,     // КрГРЭС-2
-            26: pgres_kpdvalues,      // ПрГРЭС
-            2: krtec2_kpdvalues,      // КрТЭЦ-2
-            3: nktec_kpdvalues,       // НкТЭЦ
-            4: krtec1_kpdvalues,      // КрТЭЦ-1
-            6: bartec2_kpdvalues,     // БарТЭЦ-2
-            7: bartec3_kpdvalues,     // БарТЭЦ-3
-            8: abtec_kpdvalues,       // АбТЭЦ
-            10: mintec_kpdvalues,     // МинТЭЦ
-            12: krtec3_kpdvalues,     // КрТЭЦ-3
-            13: kantec_kpdvalues,     // КанТЭЦ
-            14: kemtec_kpdvalues,     // КемТЭЦ
-            17: ntec2_kpdvalues,      // НТЭЦ-2
-            18: ntec3_kpdvalues,      // НТЭЦ-3
-            19: ntec4_kpdvalues,      // НТЭЦ-4
-            20: ntec5_kpdvalues,      // НТЭЦ-5
-            22: bitec_kpdvalues,      // БиТЭЦ
-            21: bbtec_kpdvalues       // БбТЭЦ
-        };
-
-        const urtvalues = {
-            25: rgres_urtvalues,      // РефГРЭС
-            9: tugres_urtvalues,      // ТуГРЭС
-            15: bgres_urtvalues,      // БелГРЭС
-            1: ngres_urtvalues,       // НазГРЭС
-            24: kgres2_urtvalues,     // КрГРЭС-2
-            26: pgres_urtvalues,      // ПрГРЭС
-            2: krtec2_urtvalues,      // КрТЭЦ-2
-            3: nktec_urtvalues,       // НкТЭЦ
-            4: krtec1_urtvalues,      // КрТЭЦ-1
-            6: bartec2_urtvalues,     // БарТЭЦ-2
-            7: bartec3_urtvalues,     // БарТЭЦ-3
-            8: abtec_urtvalues,       // АбТЭЦ
-            10: mintec_urtvalues,     // МинТЭЦ
-            12: krtec3_urtvalues,     // КрТЭЦ-3
-            13: kantec_urtvalues,     // КанТЭЦ
-            14: kemtec_urtvalues,     // КемТЭЦ
-            17: ntec2_urtvalues,      // НТЭЦ-2
-            18: ntec3_urtvalues,      // НТЭЦ-3
-            19: ntec4_urtvalues,      // НТЭЦ-4
-            20: ntec5_urtvalues,      // НТЭЦ-5
-            22: bitec_urtvalues,      // БиТЭЦ
-            21: bbtec_urtvalues       // БбТЭЦ
-        };
-
+        // ============ КОНЕЦ БЛОКА НОРМАТИВНЫХ ЗНАЧЕНИЙ ============
 
         // Берём данные из C# и превращаем их в пригодный для D3.js формат
     const turbinsData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Turbins));
     const boilersData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Boilers));
         // Форматируем данные в иерархическом виде
-        const hierarchicalData_turbin = {
-            name: "Turbines",
-            children: turbinsData.map(item => ({
+    const hierarchicalData_turbin = {
+        name: "Turbines",
+        children: turbinsData.map(item => {
+            // NominalURT из БД: если АСТЭП передал nominal_urt > 0, то уже = nominal_urt + variation
+            // Если не передал — хранится 0, надо взять из normative_config и добавить variation
+            let nominalValue = item.NominalURT || 0;
+            const variation = item.Variation || 0;
+
+            // NominalURT < 500 → АСТЭП не дал nominal_urt (реальный УРТ всегда > 700 г/кВт·ч)
+            // Берём базу из normative_config и прибавляем variation
+            if (nominalValue < 500) {
+                const stationUrtValues = urtvalues[item.StationID];
+                const turbinKey = parseInt(item.TurbinID);
+                let baseURT = 0;
+                if (stationUrtValues && stationUrtValues[turbinKey] && stationUrtValues[turbinKey] > 0) {
+                    baseURT = stationUrtValues[turbinKey];
+                } else {
+                    baseURT = 2300;
+                }
+                nominalValue = baseURT + variation;
+            }
+
+            // Если включено исключение турбин ТЭЦ и станция - ТЭЦ, обнуляем рейтинг
+            const isTecStation = tecStations.includes(item.StationID);
+            const equipKeyT = `${item.StationID}_${item.TurbinID}`;
+            const isEquipEnabled = eqTurbines[equipKeyT] !== false;
+            const shouldExclude = !isEquipEnabled || (excludeTecFromUrl && isTecStation);
+
+            // Метаданные: дата КР/СР и примечание
+            const stationUrtMeta = urtmeta[item.StationID];
+            let urtMetaEntry = null;
+            if (stationUrtMeta) {
+                const normalizeKey = k => k.replace(/^0+(\d)/, '$1');
+                const turbinNorm = normalizeKey(String(item.TurbinID));
+                if (stationUrtMeta[item.TurbinID]) {
+                    urtMetaEntry = stationUrtMeta[item.TurbinID];
+                } else {
+                    for (const [cfgKey, cfgVal] of Object.entries(stationUrtMeta)) {
+                        if (normalizeKey(cfgKey) === turbinNorm) {
+                            urtMetaEntry = cfgVal;
+                            break;
+                        }
+                    }
+                }
+            }
+            const urt_date = urtMetaEntry ? urtMetaEntry.date : '';
+            const urt_note = urtMetaEntry ? urtMetaEntry.note : '';
+
+            return {
                 urt: item.URT,
-                size: item.Consumption,
+                size: shouldExclude ? 0 : item.Consumption, // Обнуляем вес для ТЭЦ турбин
                 station: item.StationID,
                 turbin: item.TurbinID,
-                urt_percent: (((item.URT - (urtvalues[item.StationID][parseInt(item.TurbinID)] > 0 ? urtvalues[item.StationID][parseInt(item.TurbinID)] : 2300)) / item.URT) * 100), // Новое поле с вычисленным значением
-                urt_percent_normal: urtvalues[item.StationID][parseInt(item.TurbinID)] > 0 ? urtvalues[item.StationID][parseInt(item.TurbinID)] : 2300
-            }))
-        };
+                urt_percent: shouldExclude ? 0 : (((item.URT - nominalValue) / nominalValue) * 100),
+                urt_percent_normal: nominalValue,
+                excluded: shouldExclude, // Флаг для визуализации
+                urt_date: urt_date,
+                urt_note: urt_note
+            };
+        })
+    };
+
         
         const hierarchicalData_boiler = {
     name: "Boilers",
@@ -941,145 +515,318 @@
 
         const kpdValue = kpdvalues[stationID] ? kpdvalues[stationID][boilerID] : undefined;
         const baseKPD = kpdValue > 0 ? kpdValue : 91;
-        const kpd_percent = (((item.KPD - baseKPD) / item.KPD) * 100);
-        const kpd_percent_normal = baseKPD;
+        // Поправки применяются к нормативу: adjustedNorm = baseKPD - KPD_correction
+        // KPD хранится сырым, KPD_correction = humidity + ash - (temp_fact - temp_nominal) * temp_koef
+        const kpdCorrection = item.KPD_correction || 0;
+        const adjustedNorm = baseKPD - kpdCorrection;
+        const kpd_percent = (((item.KPD - adjustedNorm) / adjustedNorm) * 100);
+        const kpd_percent_normal = adjustedNorm;
+
+        // Метаданные: дата КР/СР и примечание
+        // Нормализуем ключ: убираем ведущие нули для сравнения
+        const stationMeta = kpdmeta[stationID];
+        let meta = null;
+        if (stationMeta) {
+            // normalize: убираем ведущие нули из числовой части ("01А" → "1А", "08" → "8")
+            const normalizeKey = k => k.replace(/^0+(\d)/, '$1');
+            const boilerNorm = normalizeKey(boilerID);
+            // Прямой поиск или поиск по нормализованному ключу
+            if (stationMeta[boilerID]) {
+                meta = stationMeta[boilerID];
+            } else {
+                // Перебираем ключи конфига, нормализуем и сравниваем
+                for (const [cfgKey, cfgVal] of Object.entries(stationMeta)) {
+                    if (normalizeKey(cfgKey) === boilerNorm) {
+                        meta = cfgVal;
+                        break;
+                    }
+                }
+            }
+        }
+        const kpd_date = meta ? meta.date : '';
+        const kpd_note = meta ? meta.note : '';
+
+        const equipKeyB = `${item.StationID}_${item.BoilerID}`;
+        const isBoilerEnabled = eqBoilers[equipKeyB] !== false;
 
         return {
             kpd: item.KPD,
-            size: item.Production,
+            size: isBoilerEnabled ? item.Production : 0,   // Исключённые котлы обнуляем
+            consumption: item.Consumption,   // Для tooltip сохраняем расход топлива
             station: item.StationID,
             boiler: item.BoilerID,
-            kpd_percent: kpd_percent,
-            kpd_percent_normal: kpd_percent_normal
+            kpd_percent: isBoilerEnabled ? kpd_percent : 0,
+            kpd_percent_normal: kpd_percent_normal,
+            kpd_date: kpd_date,
+            kpd_note: kpd_note
         };
-    }) 
+    })
 };
 
-        // Объединяем данные и сортируем по StationID
+        // Объединяем данные для treemap (нужно для подсветки станций)
         const combinedData = hierarchicalData_turbin.children.concat(hierarchicalData_boiler.children);
-        
-        
-        // Функция для вычисления рейтинга
-        function calculateRating(group) {
-        const sumUrtPercent = group.reduce((acc, curr) => {
-        const value = curr.urt_percent !== undefined ? curr.urt_percent : 0;
-        return acc + parseFloat(value) * curr.size * -1;
-        }, 0);
 
-        const sumKpdPercent = group.reduce((acc, curr) => {
-            const value = curr.kpd_percent !== undefined ? curr.kpd_percent : 0;
-            return acc + parseFloat(value) * curr.size;
-        }, 0);
+// Функция для вычисления рейтинга (такая же как на Index)
+function calculateRating(group) {
+    const stationId = group.length > 0 ? group[0].station : null;
+    const isTec = tecStations.includes(parseInt(stationId));
+    const excludeTurbines = excludeTecTurbinesFlag && isTec;
 
-        const totalSum = group.reduce((acc, curr) => acc + curr.size, 0);
+    // Котлы: взвешенный средний kpd_percent
+    const boilers = group.filter(d => d.kpd_percent !== undefined);
+    const boilerWeightSum = boilers.reduce((acc, d) => acc + d.size, 0);
+    const boilerRating = boilerWeightSum !== 0
+        ? boilers.reduce((acc, d) => acc + d.kpd_percent * d.size, 0) / boilerWeightSum
+        : 0;
 
-        // Проверка на случай, если totalSum равен 0
-        return totalSum !== 0 ? (sumUrtPercent + sumKpdPercent)*2 / totalSum : 0;
+    // Турбины: взвешенный средний urt_percent
+    const turbines = excludeTurbines ? [] : group.filter(d => d.urt_percent !== undefined);
+    const turbineWeightSum = turbines.reduce((acc, d) => acc + d.size, 0);
+    const turbineRating = turbineWeightSum !== 0
+        ? turbines.reduce((acc, d) => acc + d.urt_percent * d.size, 0) / turbineWeightSum
+        : 0;
 
-        }
+    // Итоговая формула: ((100 + boilerRating) / (100 + turbineRating) - 1) * 100
+    return ((100 + boilerRating) / (100 + turbineRating) - 1) * 100;
+}
 
-        // Группируем данные по StationID
-        const groupedData = {};
-        combinedData.forEach(item => {
-            if (!groupedData[item.station]) {
-                groupedData[item.station] = [];
-            }
-            groupedData[item.station].push(item);
-        });
+// Группируем данные по StationID
+const groupedData = {};
+combinedData.forEach(item => {
+    if (!groupedData[item.station]) {
+        groupedData[item.station] = [];
+    }
+    groupedData[item.station].push(item);
+});
 
-        // Создаем массив объектов для рейтинга
-        const ratings = Object.keys(groupedData).map(key => ({
-            StationID: key,
-            rating: calculateRating(groupedData[key])
-        }));
+// Создаем массив объектов для рейтинга
+const ratings = Object.keys(groupedData).map(key => ({
+    StationID: key,
+    rating: calculateRating(groupedData[key]),
+    hasData: true
+}));
 
-        // Сортируем рейтинг по значению
-        ratings.sort((a, b) => b.rating - a.rating);
+// Сортируем рейтинг по значению
+ratings.sort((a, b) => b.rating - a.rating);
 
-        // Выбираем контейнер рейтинга
-        const ratingContainer = d3.select('.rating-container');
-        function selectColorForRating(rt) {
-                    if (rt < 0) return 'score-value-3'; // Красный
-                    if (rt >= 0 ) return 'score-value-4'; // Светло-зеленый
-                    return 'score-value-0'; // Серый по умолчанию
-                }
+// Создаем объект для быстрого поиска станций с рейтингом
+const ratingsMap = {};
+ratings.forEach(r => {
+    ratingsMap[r.StationID] = true;
+});
 
-        // Обновленные функции highlightStation и resetHighlight
-        function highlightStation(StationID) {
-        // Затемняем все элементы и текст
-        d3.selectAll(".node rect")
+// Находим станции без данных
+const stationsWithoutData = Object.keys(stations)
+    .filter(stationID => !ratingsMap[stationID])
+    .map(stationID => ({
+        StationID: stationID,
+        rating: null,
+        hasData: false
+    }));
+
+// Объединяем: сначала станции с данными, потом без данных
+const allRatings = [...ratings, ...stationsWithoutData.filter(s => !s.hasData || s.hasData === false)];
+
+// Сохраняем рейтинг в localStorage для синхронизации
+localStorage.setItem('altairRatings', JSON.stringify(allRatings));
+
+
+
+// Выбираем контейнер рейтинга (карточки добавляем в wrapper)
+const ratingContainer = d3.select('#rating-cards-vis');
+
+function selectColorForRating(rt, hasData) {
+    if (!hasData) return 'score-value-0'; // ✅ Серый для станций без данных
+    if (rt < 0) return 'score-value-3'; // Красный
+    if (rt >= 0) return 'score-value-4'; // Светло-зеленый
+    return 'score-value-0'; // Серый по умолчанию
+}
+
+// Обновленные функции highlightStation и resetHighlight
+function highlightStation(StationID) {
+    // Затемняем все элементы и текст
+    d3.selectAll(".node rect")
         .style("opacity", 0.3);
-        d3.selectAll(".node text")
+    d3.selectAll(".node text")
         .style("opacity", 0.3);
 
-        // Подсвечиваем элементы выбранной станции
-        d3.selectAll(".node")
-            .filter(d => d.data && d.data.station == StationID)
-            .select("rect")
-            .style("opacity", 1);
-
-        d3.selectAll(".node")
-            .filter(d => d.data && d.data.station == StationID)
-            .selectAll("text")
-            .style("opacity", 1);
-
-        }
-
-        function resetHighlight() {
-        // Возвращаем нормальную прозрачность всем элементам
-        d3.selectAll(".node rect, .node text")
+    // Подсвечиваем элементы выбранной станции
+    d3.selectAll(".node")
+        .filter(d => d.data && d.data.station == StationID)
+        .select("rect")
         .style("opacity", 1);
-        }
-        // Генерируем карточки рейтинга с радиокнопками
-        ratings.forEach((rating, index) => {
-            const cardDiv = ratingContainer.append('div')
-                .attr('class', 'rating-card');
-            // Левая часть - информация о станции
-            const ratingInfo = cardDiv.append('div')
-                .attr('class', 'rating-info')
-                .on('click', function() {
-                    window.open(stationLinks[rating.StationID], '_blank');
-                });
-            ratingInfo.append('span')
-                .attr('class', 'rank-number')
-                .text(index + 1 + '.');
-            ratingInfo.append('span')
-                .attr('class', 'user-name')
-                .text(stations[rating.StationID]);
-            ratingInfo.append('span')
-                .attr('class', selectColorForRating(rating.rating))
-                .text(`${rating.rating.toFixed(2)}%`);
-            // Правая часть - радиокнопка
-            const radioDiv = cardDiv.append('div')
-                .attr('class', 'radio-btn')
-                .on('click', function(e) {
-                    e.stopPropagation();
-                    highlightStation(rating.StationID);
-                    // Помечаем выбранную радиокнопку
-                    d3.selectAll('input[name="station"]').property('checked', false);
-                    d3.select(this).select('input').property('checked', true);
-                });
-            radioDiv.append('input')
-                .attr('type', 'radio')
-                .attr('name', 'station')
-                .attr('id', `station-${rating.StationID}`);
-        }); 
-        // Сбрасываем выделение при клике вне карточек
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.rating-card')) {
-                resetHighlight();
-                d3.selectAll('input[name="station"]').property('checked', false);
+
+    d3.selectAll(".node")
+        .filter(d => d.data && d.data.station == StationID)
+        .selectAll("text")
+        .style("opacity", 1);
+}
+
+function resetHighlight() {
+    // Возвращаем нормальную прозрачность всем элементам
+    d3.selectAll(".node rect, .node text")
+        .style("opacity", 1);
+}
+
+// ✅ НОВОЕ: Переменная для отслеживания выбранной станции
+let selectedStationID = null;
+
+// Генерируем карточки рейтинга с обработкой станций без данных
+allRatings.forEach((rating, index) => {
+    const cardDiv = ratingContainer.append('div')
+        .attr('class', 'rating-card');
+    
+    const ratingInfo = cardDiv.append('div')
+        .attr('class', 'rating-info')
+        .on('click', function() {
+            if (stationLinks[rating.StationID]) {
+                window.open(stationLinks[rating.StationID], '_blank');
             }
         });
+    
+    ratingInfo.append('span')
+        .attr('class', 'rank-number')
+        .text(index + 1 + '.');
+    
+    ratingInfo.append('span')
+        .attr('class', 'user-name')
+        .text(stations[rating.StationID]);
+    
+    ratingInfo.append('span')
+        .attr('class', selectColorForRating(rating.rating, rating.hasData))
+        .text(rating.hasData ? `${rating.rating.toFixed(2)}%` : 'Нет данных');
+    
+    // Правая часть - чекбокс (только для станций с данными)
+    if (rating.hasData) {
+        const checkboxDiv = cardDiv.append('div')
+            .attr('class', 'radio-btn')
+            .on('click', function(e) {
+                e.stopPropagation();
+                // Обновляем подсветку на основе выбранных станций
+                updateHighlightFromCheckboxes();
+                // Сохраняем состояние чекбоксов в localStorage
+                saveCheckboxState();
+            });
 
-        // Общая ширина окна
-        const totalWidth = document.body.clientWidth; // Ограничиваем ширину
-        const graphWidth = totalWidth - (totalWidth / 6.8) ; // Ширина одного графика (оставляем пространство между графиками)
+        // Загружаем состояние из localStorage
+        const savedState = JSON.parse(localStorage.getItem('stationCheckboxState') || '{}');
+        const isChecked = savedState[rating.StationID] !== undefined ? savedState[rating.StationID] : true;
+
+        checkboxDiv.append('input')
+            .attr('type', 'checkbox')
+            .attr('name', 'station-vis')
+            .attr('data-station-id', rating.StationID)
+            .attr('id', `station-vis-${rating.StationID}`)
+            .property('checked', isChecked);
+    }
+});
+
+// Функция сохранения состояния чекбоксов
+function saveCheckboxState() {
+    const state = {};
+    d3.selectAll('input[name="station-vis"]').each(function() {
+        const stationId = d3.select(this).attr('data-station-id');
+        state[stationId] = d3.select(this).property('checked');
+    });
+    localStorage.setItem('stationCheckboxState', JSON.stringify(state));
+}
+
+// Функция подсветки на основе выбранных чекбоксов
+function updateHighlightFromCheckboxes() {
+    const checkedStations = [];
+    d3.selectAll('input[name="station-vis"]:checked').each(function() {
+        checkedStations.push(+d3.select(this).attr('data-station-id'));
+    });
+
+    if (checkedStations.length === 0) {
+        // Если ничего не выбрано - всё затемнено
+        d3.selectAll(".node rect, .node text").style("opacity", 0.3);
+    } else {
+        // Затемняем все
+        d3.selectAll(".node rect").style("opacity", 0.3);
+        d3.selectAll(".node text").style("opacity", 0.3);
+
+        // Подсвечиваем выбранные станции
+        checkedStations.forEach(stationId => {
+            d3.selectAll(".node")
+                .filter(d => d.data && d.data.station == stationId)
+                .select("rect")
+                .style("opacity", 1);
+
+            d3.selectAll(".node")
+                .filter(d => d.data && d.data.station == stationId)
+                .selectAll("text")
+                .style("opacity", 1);
+        });
+    }
+}
+
+// Обновленные функции highlightStation и resetHighlight
+function highlightStation(StationID) {
+    // Затемняем все элементы и текст
+    d3.selectAll(".node rect").style("opacity", 0.3);
+    d3.selectAll(".node text").style("opacity", 0.3);
+
+    // Подсвечиваем элементы выбранной станции
+    d3.selectAll(".node")
+        .filter(d => d.data && d.data.station == StationID)
+        .select("rect")
+        .style("opacity", 1);
+
+    d3.selectAll(".node")
+        .filter(d => d.data && d.data.station == StationID)
+        .selectAll("text")
+        .style("opacity", 1);
+}
+
+function resetHighlight() {
+    // Возвращаем нормальную прозрачность всем элементам
+    d3.selectAll(".node rect, .node text").style("opacity", 1);
+}
+
+// Кнопка "Выбрать/Снять все" для Visualisation
+// Определяем начальное состояние на основе сохранённых чекбоксов
+const savedStateInit = JSON.parse(localStorage.getItem('stationCheckboxState') || '{}');
+let allCheckedVis = Object.keys(savedStateInit).length === 0 || Object.values(savedStateInit).every(v => v === true);
+document.getElementById('toggle-all-vis').textContent = allCheckedVis ? '☑' : '☐';
+
+// Применяем начальную подсветку на основе сохранённого состояния
+setTimeout(() => {
+    updateHighlightFromCheckboxes();
+}, 100);
+
+document.getElementById('toggle-all-vis').addEventListener('click', function() {
+    allCheckedVis = !allCheckedVis;
+    d3.selectAll('input[name="station-vis"]').property('checked', allCheckedVis);
+    this.textContent = allCheckedVis ? '☑' : '☐';
+    saveCheckboxState();
+    if (allCheckedVis) {
+        resetHighlight();
+    } else {
+        d3.selectAll(".node rect, .node text").style("opacity", 0.3);
+    }
+});
+
+        // Общая ширина окна (margin-right: 210px уже задан на контейнере)
+        const totalWidth = document.body.clientWidth - 210;
+        const graphWidth = totalWidth; // Ширина графика
         const height = window.innerHeight * 0.85;
 
         
         
         const tooltip = d3.select("#tooltip");
+
+        // Корректировка координат tooltip с учётом CSS zoom на <html>
+        function getZoom() {
+            const z = parseFloat(document.documentElement.style.zoom);
+            return isNaN(z) || z === 0 ? 1 : z;
+        }
+        function tipX(pageX, offset) { return (pageX / getZoom() + (offset || 0)) + "px"; }
+        function tipY(pageY, offset) { return (pageY / getZoom() + (offset || 0)) + "px"; }
+
+        // Переменная таймера для скрытия подсказки (общая для обоих treemap)
+        let hideTimeoutTurbin;
+        let hideTimeoutBoiler;
 
         // Функция для рисования одного treemap
             function drawTreemap_turbin(containerSelector, data) {
@@ -1119,7 +866,8 @@
                     const g = d3.select(this);
                     const rectWidth = d.x1 - d.x0; // Ширина прямоугольника
                     const rectHeight = d.y1 - d.y0; // Высота прямоугольника
-                    const textContent = `${stations[d.data.station]} КА${d.data.turbin} ${d.data.urt_percent.toFixed(2)}%`;
+                    const urtPercent = d.data.urt_percent !== undefined ? d.data.urt_percent : 0;
+                    const textContent = `${stations[d.data.station]} ТА${d.data.turbin} ${urtPercent.toFixed(2)}%`;
 
                     // Вычислим оптимальное количество символов в строке
                     let fontSize = 16; // Начальный размер шрифта
@@ -1203,40 +951,44 @@
                 return wrappedLines;
             }
 
-                    // Переменная таймера для скрытия подсказки
-                    let hideTimeout;
-
                     // Функции обработки подсказки
                     function showTooltip(event, d) {
+                        const urt = d.data.urt !== undefined ? d.data.urt : 0;
+                        const urtNormal = d.data.urt_percent_normal !== undefined ? d.data.urt_percent_normal : 0;
+                        const size = d.data.size !== undefined ? d.data.size : 0;
+
+                        // Формируем строку даты КР/СР
+                        const urtDate = d.data.urt_date || '';
+                        const urtNote = d.data.urt_note || '';
+                        let dateLabel = '';
+                        if (urtDate && urtDate !== '-') {
+                            const isSR = urtNote.toLowerCase().includes('ср');
+                            dateLabel = `<br/>Дата ${isSR ? 'СР' : 'КР'}: ${urtDate}`;
+                        }
+
                         const content = `
                             Станция: ${stations[d.data.station]}<br/>
                             Турбина: ${d.data.turbin}<br/>
-                            УРТ: ${d.data.urt.toFixed(2)}<br/>
-                            Норма УРТ: ${d.data.urt_percent_normal.toFixed(2)}<br/>
-                            Расход тепла: ${d.data.size.toFixed(2)}
+                            УРТ: ${urt.toFixed(2)}<br/>
+                            Норма УРТ: ${urtNormal.toFixed(2)}${dateLabel}<br/>
+                            Расход тепла: ${size.toFixed(2)}
                         `;
-                        
-                        clearTimeout(hideTimeout);
 
-                        // Определяем расстояние от нижнего края окна
-                        const bottomSpace = window.innerHeight - event.pageY;
-                            tooltip.html(content)
-                                .style("opacity", 1)
-                                .style("top", event.pageY - tooltip.node().offsetHeight + "px")
-                                .style("left", event.pageX - 150 + "px");
+                        clearTimeout(hideTimeoutTurbin);
+
+                        tooltip.html(content)
+                            .style("opacity", 1)
+                            .style("top",  tipY(event.pageY, -tooltip.node().offsetHeight))
+                            .style("left", tipX(event.pageX, -150));
                     }
 
                     function moveTooltip(event) {
-                        // Здесь логика перемещения аналогична showTooltip,
-                        // проверяя свободное пространство и меняя положение
-                        const bottomSpace = window.innerHeight - event.pageY;
-
-                            tooltip.style("top", event.pageY - tooltip.node().offsetHeight + "px");
-                        tooltip.style("left", event.pageX - 150 + "px");
+                        tooltip.style("top",  tipY(event.pageY, -tooltip.node().offsetHeight))
+                               .style("left", tipX(event.pageX, -150));
                     }
 
                     function hideTooltip() {
-                        hideTimeout = setTimeout(() => {
+                        hideTimeoutTurbin = setTimeout(() => {
                             tooltip.style("opacity", 0);
                         }, 50);
                     }
@@ -1277,7 +1029,7 @@
                .attr("width", d => d.x1 - d.x0)
                .attr("height", d => d.y1 - d.y0)
                .attr("class", "node-rect")
-               .attr("fill", d => selectColorForKPD(d.data.kpd_percent))
+               .attr("fill", d => selectColorForKPD(d.data.kpd_percent !== undefined ? d.data.kpd_percent : 0))
                .on("mouseenter", showTooltip) // Показываем подсказку при наведении
                .on("mousemove", moveTooltip) // Обновляем позицию подсказки
                .on("mouseleave", hideTooltip); // Скрываем подсказку при уходе мыши
@@ -1287,7 +1039,8 @@
                     const g = d3.select(this);
                     const rectWidth = d.x1 - d.x0; // Ширина прямоугольника
                     const rectHeight = d.y1 - d.y0; // Высота прямоугольника
-                    const textContent = `${stations[d.data.station]} КА${d.data.boiler} ${d.data.kpd_percent.toFixed(2)}%`;
+                    const kpdPercent = d.data.kpd_percent !== undefined ? d.data.kpd_percent : 0;
+                    const textContent = `${stations[d.data.station]} КА${d.data.boiler} ${kpdPercent.toFixed(2)}%`;
 
                     // Вычислим оптимальное количество символов в строке
                     let fontSize = 16; // Начальный размер шрифта
@@ -1370,31 +1123,44 @@
 
                 return wrappedLines;
             }
-            
-                let hideTimeout;
+
                             // Функции для всплывающих подсказок
                 function showTooltip(event, d) {
+                    const kpd = d.data.kpd !== undefined ? d.data.kpd : 0;
+                    const kpdNormal = d.data.kpd_percent_normal !== undefined ? d.data.kpd_percent_normal : 0;
+                    const consumption = d.data.consumption !== undefined ? d.data.consumption : 0;
+
+                    // Формируем строку даты КР/СР
+                    const kpdDate = d.data.kpd_date || '';
+                    const kpdNote = d.data.kpd_note || '';
+                    let dateLabel = '';
+                    if (kpdDate && kpdDate !== '-') {
+                        // Определяем тип по примечанию: СР → "Дата СР", иначе "Дата КР"
+                        const isSR = kpdNote.toLowerCase().includes('ср');
+                        dateLabel = `<br/>${isSR ? 'Дата СР' : 'Дата КР'}: ${kpdDate}`;
+                    }
+
                     const content = `
                         Станция: ${stations[d.data.station]}<br/>
                         Котёл: ${d.data.boiler}<br/>
-                        КПД: ${d.data.kpd.toFixed(2)}<br/>
-                        Норма КПД: ${d.data.kpd_percent_normal.toFixed(2)}<br/>
-                        Выработка тепла: ${d.data.size.toFixed(2)}
+                        КПД: ${kpd.toFixed(2)}<br/>
+                        Норма КПД: ${kpdNormal.toFixed(2)}${dateLabel}<br/>
+                        Расход топлива: ${consumption.toFixed(2)}
                     `;
-                    clearTimeout(hideTimeout);
+                    clearTimeout(hideTimeoutBoiler);
                     tooltip.html(content)
                         .style("opacity", 1)
-                        .style("top", event.pageY + 10 + "px")
-                        .style("left", event.pageX - 150 + "px");
+                        .style("top",  tipY(event.pageY, 10))
+                        .style("left", tipX(event.pageX, -150));
                 }
 
                 function moveTooltip(event) {
-                    tooltip.style("top", event.pageY + 10 + "px")
-                        .style("left", event.pageX - 150 + "px");
+                    tooltip.style("top",  tipY(event.pageY, 10))
+                           .style("left", tipX(event.pageX, -150));
                 }
 
                 function hideTooltip() {
-                    hideTimeout = setTimeout(() => {
+                    hideTimeoutBoiler = setTimeout(() => {
                         tooltip.style("opacity", 0)
                     },50);
                 }
@@ -1415,11 +1181,84 @@
         // Отрисовываем правый график (можно передать тот же или другой набор данных)
         drawTreemap_boiler("#treemap-left", hierarchicalData_boiler);
 
-        document.getElementById('r_1').addEventListener('click', function () {
-            window.location.href = '@Url.Action("Contacts", "Home")';
-        });
-        document.getElementById('r_2').addEventListener('click', function () {
-            window.location.href = '@Url.Action("Index", "Home")';
+        // Автоподбор размера шрифта для рейтинга
+        function fitRatingFontSize() {
+            const container = document.getElementById('rating-container-vis');
+            const wrapper = document.getElementById('rating-cards-vis');
+            if (!container || !wrapper) {
+                console.log('fitRatingFontSize: container or wrapper not found');
+                return;
+            }
+
+            // Определяем масштаб браузера
+            const browserZoom = window.devicePixelRatio || 1;
+
+            // Используем полную доступную высоту контейнера
+            const availableHeight = window.innerHeight - 60 - 45; // минус header и footer
+
+            // Ограничиваем высоту контейнера
+            container.style.height = availableHeight + 'px';
+            container.style.bottom = 'auto';
+
+            // Высота для карточек (минус заголовок ~35px)
+            const cardsAvailableHeight = availableHeight - 35;
+            wrapper.style.maxHeight = cardsAvailableHeight + 'px';
+            wrapper.style.overflow = 'hidden';
+
+            const cards = wrapper.querySelectorAll('.rating-card');
+            console.log('fitRatingFontSize: cards count =', cards.length, 'availableHeight =', availableHeight, 'zoom =', browserZoom);
+            if (cards.length === 0) return;
+
+            // Если уже рассчитан размер шрифта и это пересчёт при zoom - не меняем шрифт
+            if (wrapper.dataset.calculatedFontSize && browserZoom !== 1) {
+                wrapper.style.fontSize = wrapper.dataset.calculatedFontSize + 'px';
+                return;
+            }
+
+            // Начинаем с большого шрифта и уменьшаем пока не поместится
+            let fontSize = 20;
+            const minFontSize = 6;
+
+            while (fontSize >= minFontSize) {
+                wrapper.style.fontSize = fontSize + 'px';
+
+                // Пересчитываем высоту контента
+                let totalHeight = 0;
+                cards.forEach(card => {
+                    totalHeight += card.offsetHeight;
+                });
+
+                // Проверяем, не переполняется ли текст по ширине в каждой карточке
+                let textFits = true;
+                cards.forEach(card => {
+                    const ratingInfo = card.querySelector('.rating-info');
+                    if (ratingInfo && ratingInfo.scrollWidth > ratingInfo.clientWidth) {
+                        textFits = false;
+                    }
+                });
+
+                console.log('fitRatingFontSize: trying fontSize =', fontSize, 'totalHeight =', totalHeight, 'cardsAvailableHeight =', cardsAvailableHeight, 'textFits =', textFits);
+
+                if (totalHeight <= cardsAvailableHeight && textFits) {
+                    console.log('fitRatingFontSize: final fontSize =', fontSize, 'totalHeight =', totalHeight);
+                    // Уменьшаем на 1 пункт для лучшего вида и сохраняем
+                    const finalSize = fontSize - 1;
+                    wrapper.style.fontSize = finalSize + 'px';
+                    wrapper.dataset.calculatedFontSize = finalSize;
+                    break;
+                }
+                fontSize -= 0.5;
+            }
+        }
+
+        // Вызываем после загрузки и при ресайзе
+        setTimeout(fitRatingFontSize, 300);
+        window.addEventListener('resize', fitRatingFontSize);
+
+        // Перезагружаем страницу если браузер восстановил её из BFCACHE,
+        // чтобы гарантировать пересчёт с актуальными настройками оборудования.
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) { location.reload(); }
         });
     </script>
 </div>
