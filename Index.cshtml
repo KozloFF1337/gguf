@@ -13,20 +13,71 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <style>
         .rating-container {
-        margin-left: 5px;
-        margin-bottom: 5px;
-        width: calc(12% + 40px);
-        float: left;
-        padding: 10px;
+        position: fixed;
+        top: 60px;
+        right: 0;
+        bottom: 45px;
+        width: 200px;
+        padding: 8px;
         padding-top: 0;
         background-color: #222;
         color: white;
-        border-radius: 10px;
+        border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         font-family: sans-serif;
-        font-size: 14px;
-        line-height: 1.4;
-        zoom: 80%;
+        line-height: 1.2;
+        overflow: hidden;
+        z-index: 100;
+        }
+/* Кнопка для раскрытия графика Экономия */
+.economy-toggle-btn {
+    background: linear-gradient(135deg, #333 0%, #444 100%);
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #ddd;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.economy-toggle-btn:hover {
+    background: linear-gradient(135deg, #444 0%, #555 100%);
+    color: #fd817e;
+    border-color: #fd817e;
+}
+.economy-toggle-btn.active {
+    background: linear-gradient(135deg, #fd817e 0%, #ff6b6b 100%);
+    color: white;
+    border-color: #fd817e;
+}
+#economy-btn-arrow {
+    transition: transform 0.3s ease;
+}
+.economy-toggle-btn.active #economy-btn-arrow {
+    transform: rotate(180deg);
+}
+
+/* Кликабельное кольцо Итого */
+.summary-clickable {
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+.summary-clickable:hover {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+}
+.summary-clickable:active {
+    transform: scale(0.98);
+}
+
+    html, body {
+        overflow: hidden !important;
+        height: 100vh;
+        margin: 0;
         }
     body {
         display: flex;
@@ -39,10 +90,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
-    padding: 10px;
+    margin-bottom: 0.32em;
+    padding: 0.45em;
     background-color: #333;
-    border-radius: 5px;
+    border-radius: 4px;
     box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s ease;
     cursor: pointer;
@@ -51,15 +102,33 @@
         display: flex;
         align-items: center;
         flex-grow: 1;
+        overflow: hidden;
+        white-space: nowrap;
     }
     .radio-btn {
-        margin-left: 10px;
+        margin-left: 0.5em;
         cursor: pointer;
         transform: scale(1);
         transform-origin: center;
     }
     .radio-btn input {
         cursor: pointer;
+        width: 1em;
+        height: 1em;
+    }
+    .toggle-all-btn {
+        background: #444;
+        border: 1px solid #666;
+        border-radius: 4px;
+        color: #ddd;
+        padding: 0.1em 0.4em;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .toggle-all-btn:hover {
+        background: #555;
+        border-color: #888;
     }
     .rating-card:nth-child(even) {
         background-color: #2a2a2a;
@@ -67,59 +136,61 @@
     .rank-number {
         font-weight: bold;
         color: white;
-        font-size: 16px;
-        margin-right: 10px;
+        font-size: 1em;
+        margin-right: 0.5em;
     }
     .user-name {
         font-style: normal;
-        font-size: 16px;
+        font-size: 1em;
         color: #dddddd;
     }
     .score-value-0 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #5d5d5d;
     }
     .score-value-1 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #8B0000;
     }
     .score-value-2 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #c5172c;
     }
     .score-value-3 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #FF0000;
     }
     .score-value-4 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #009F00;
     }
     .score-value-5 {
-        margin-left: 4px;
-        font-size: 16px;
+        margin-left: 0.25em;
+        font-size: 1em;
         font-weight: bold;
         color: #006400;
     }    
     .tooltip {
-    position: absolute;
-    background-color: rgba(0, 0, 0, 0.8);
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.85);
     color: white;
-    padding: 8px;
-    z-index: 1000;
+    padding: 8px 12px;
+    border-radius: 6px;
+    z-index: 9999;
     opacity: 0;
-    transition: opacity 0.01s ease-in-out;
+    transition: opacity 0.05s ease-in-out;
     pointer-events: none;
+    white-space: nowrap;
     }
     #sidebar {
         grid-column-start: span 1;
@@ -186,47 +257,50 @@
     }
 
 .gauges-container{
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: stretch;   /* карточки растягиваются */
-  padding: 0;                 /* без внутренних отступов */
+  gap: 12px;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
   box-sizing: border-box;
   flex-wrap: nowrap;
   min-width: 0;
+  height: 240px;
 }
 
     .bars-container{
-  flex: 1 1 auto;
+  flex: 1 0 auto;
   display: flex;
   gap: 8px;
-  align-items: flex-start;
+  align-items: stretch;
   justify-content: center;
   box-sizing: border-box;
-  margin-top: 16px;
-  margin-left: 10px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;              /* тоже перенос */
+  margin-top: 10px;
+  margin-left: 6px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  max-height: calc(100% - 10px);
+  overflow: hidden;
 }
-  /* Отдельные карточки для гистограмм */
 
 .bar-card{
-  /* ширина «зажата» между минимумом и максимумом и растёт от окна */
-  width: clamp(280px, 48vw, 640px);
-  flex: 1 1 clamp(280px, 48vw, 640px);
+  width: clamp(288px, 46vw, 696px);
+  flex: 1 1 clamp(288px, 46vw, 696px);
   background: #222;
-  border-radius:12px;
-  padding:4px 4px 4px;
-  box-shadow:0 2px 10px rgba(0,0,0,.35);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  display: flex;
+  flex-direction: column;
 }
-  .mini-title{
-    margin: 0 0 8px;
-    font-size: 20px;
-    color: #dddddd;
-    text-align: center;
-    letter-spacing: .2px;
-  }
+.mini-title{
+  margin: 0 0 5px;
+  font-size: 19px;
+  color: #dddddd;
+  text-align: center;
+  letter-spacing: .2px;
+}
 .gauge-svg,
 .mini-svg{
   width: 100%;
@@ -235,28 +309,28 @@
 }
   /* минималистичная палитра/типографика для баров */
   .mini-legend{
-  display:flex; gap:14px; justify-content:center; align-items:center;
-  color: #aaaaaa; font:16px/1 sans-serif; margin: 2px 0 8px;
+  display:flex; gap:17px; justify-content:center; align-items:center;
+  color: #aaaaaa; font:19px/1 sans-serif; margin: 2px 0 10px;
 }
-.sw{ width:10px; height:10px; border-radius:999px; display:inline-block; margin-right:6px; }
-.sw-a{ background:#0078A8; }   /* Серия 1 */
-.sw-b{ background:#EF4156; }   /* Серия 2 */
+.sw{ width:12px; height:12px; border-radius:999px; display:inline-block; margin-right:7px; }
+.sw-a{ background:#74c0ff; }   /* Серия 1 - Текущий год (светло-синий) */
+.sw-b{ background:#0078A8; }   /* Серия 2 - Прошлый год (синий) */
 
 .sw-boilers{ background:#0078A8; }
-.sw-turbines{ background:#EF4156; }
+.sw-turbines{ background:#74c0ff; }
 .multi-legend{
   color: #aaaaaa; font:12px/1 sans-serif;
   margin: 4px 0 6px;
 }
 
-.barA-fill{ fill:#0078A8; }    /* верхняя полоса */
-.barB-fill{ fill:#EF4156; }    /* нижняя полоса */
+.barA-fill{ fill:#74c0ff; }    /* верхняя полоса - Текущий год (светло-синий) */
+.barB-fill{ fill:#0078A8; }    /* нижняя полоса - Прошлый год (синий) */
 .bar-label{
-  fill: #aaaaaa; font:10px/1 sans-serif;
+  fill: #aaaaaa; font:8px/1 sans-serif;
   text-anchor:end; dominant-baseline:middle;
 }
 .bar-value{
-  fill: #dddddd; font:10px/1 sans-serif;
+  fill: #dddddd; font:8px/1 sans-serif;
   dominant-baseline:middle;
 }
 .origin-line{
@@ -266,60 +340,66 @@
 }
 .gauge-card,
 .summary-card{
-  flex: 1 1 0;                /* равные доли ширины */
-  min-width: 0;               /* разрешаем сжиматься */
-  max-width: none;            /* убираем верхний предел */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
   background: #222;
-  border-radius:12px;
-  padding:0;                  /* убираем внутренние отступы */
-  box-shadow:0 2px 10px rgba(0,0,0,.35);
-  display:flex; flex-direction:column; align-items:center;
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
 }
 
 /* Заголовок */
 .summary-title{
-  margin:6px 0;
-  font-size:24px;
+  margin: 5px 0;
+  font-size: 22px;
   color: #dddddd;
-  text-align:center;
-  letter-spacing:.3px;
+  text-align: center;
+  letter-spacing: .2px;
 }
 
 /* Кольцо-процент (тонкая «пончик»-полоса) */
 .summary-ring{
-  --p: 78;             /* процент (JS перезапишет) */
-  --th: 12px;          /* толщина кольца */
-  --clr: #0078A8;      /* цвет дуги (JS перезапишет) */
-  width:140px; height:140px; border-radius:50%;
+  --p: 78;
+  --th: 12px;
+  --clr: #0078A8;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
   background: conic-gradient(var(--clr) calc(var(--p)*1%), #333 0);
   -webkit-mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
           mask: radial-gradient(farthest-side, transparent calc(50% - var(--th)), #000 calc(50% - var(--th) + 1px));
-  position:relative;
-  margin-bottom:12px;
-  }
+  position: relative;
+  margin-bottom: 10px;
+}
 .gauge-title{
-  margin:6px 0;
-  font-size:24px;
+  margin: 5px 0;
+  font-size: 22px;
   color: #dddddd;
-  text-align:center;
-  letter-spacing:.3px;
+  text-align: center;
+  letter-spacing: .2px;
 }
 
 /* Итоги: число справа от кольца */
-.summary-ring .value{ display:none; } /* на случай, если останется старый div */
-.summary-inline{ display:flex; align-items:center; gap:12px; justify-content:center; margin-bottom:10px; }
-.summary-big{ color: white; font:700 28px/1 sans-serif; }
+.summary-ring .value{ display:none; }
+.summary-inline{ display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:8px; }
+.summary-big{ color: white; font:700 26px/1 sans-serif; }
 
 /* Два KPI-бейджа под кольцом */
 .kpis{
-  display:grid; grid-template-columns: 1fr 1fr; gap:10px; width:100%; max-width:460px;
+  display:grid; grid-template-columns: 1fr 1fr; gap:8px; width:100%; max-width:480px;
 }
 .kpi{
-  background: #2a2a2a; border-radius:10px; padding:10px 12px;
-  display:flex; flex-direction:column; gap:4px;
+  background: #2a2a2a; border-radius:10px; padding:8px 10px;
+  display:flex; flex-direction:column; gap:3px;
 }
-.kpi-label{ color: #aaaaaa; font:11px/1 sans-serif; text-transform:uppercase; letter-spacing:.3px; }
-.kpi-value{ color: #dddddd; font:700 18px/1 sans-serif; }
+.kpi-label{ color: #aaaaaa; font:12px/1 sans-serif; text-transform:uppercase; letter-spacing:.2px; }
+.kpi-value{ color: #dddddd; font:700 17px/1 sans-serif; }
 
 /* Контейнер и карточки под линейные графики */
 .lines-container{
@@ -335,6 +415,8 @@
   border-radius:12px;
   padding:10px 12px;
   box-shadow:0 2px 10px rgba(0,0,0,.35);
+  display: flex;
+  flex-direction: column;
 }
 .line-title{
   margin:0 0 6px;
@@ -343,7 +425,7 @@
   text-align:center;
   letter-spacing:.2px;
 }
-.line-svg{ width:100%; height:auto; display:block; }
+.line-svg{ width:100%; flex: 1; display:block; min-height: 200px; }
 
 /* Оси/сетка - адаптивные к теме */
 .axis path, .axis line{ stroke: #444; }
@@ -419,9 +501,6 @@
   color:#bdbdbd; font:12px/1 sans-serif; margin-left:4px; min-width:46px; text-align:left;
 }
 
-
-
-
 /* Карточка с много-серийным графиком — нужна для абсолютного позиционирования панели */
 .line-card{
   position: relative; /* НОВОЕ */
@@ -478,9 +557,9 @@
     </style>
 </head>
 <body>
-    <div style="margin-top: 5px;">
+    <div style="margin-top: 5px; margin-right: 210px; height: calc(100vh - 5px); overflow: hidden; box-sizing: border-box;">
         <!-- Панель выбора периода -->
-        <div class="period-panel" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; background-color: #222; border-radius: 10px; margin-left: 5px; margin-right: 5px; box-sizing: border-box;">
+        <div class="period-panel" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px; padding: 10px; background-color: #222; border-radius: 10px; margin-left: 5px; box-sizing: border-box;">
             <div style="display: flex; gap: 10px; align-items: center;">
                 <span style="color: #dddddd; font-size: 16px; font-weight: bold;">Период:</span>
                 <select id="periodSelectMain" onchange="onPeriodChangeMain()">
@@ -493,37 +572,34 @@
                 <span style="color: #dddddd; font-size: 16px; font-weight: bold;">Дата:</span>
                 <select id="dateSelectMain" onchange="reloadPageMain()" style="min-width: 150px;"></select>
             </div>
-            <div style="display: flex; gap: 10px; align-items: center; margin-left: 20px;">
-                <span style="color: #aaaaaa; font-size: 13px; font-style: italic;">
-                    Рейтинг и графики формируются на основании состояния оборудования после КР
-                </span>
-            </div>
         </div>
 
-        <div style="display:flex; width: 100%; align-items:flex-start;">
-            <div style="width: 88%;">
-                <div class="gauges-container" style="margin-left: 10px;">
+        <div style="display:flex; width: 100%; align-items:stretch;">
+            <div style="width: 100%; display: flex; flex-direction: column;">
+                <div class="gauges-container" style="margin-left: 5px;">
                     <div class="gauge-card">
-                    <h3 class="gauge-title">Котлы</h3>
+                    <h3 class="gauge-title">Котлы (КПД)</h3>
                     <svg id="gauge-1" class="gauge-svg" viewBox="0 20 320 160" preserveAspectRatio="xMidYMid meet"></svg>
                     </div>
 
-                    <div class="summary-card">
-                    <h3 class="summary-title" style="margin-bottom: 10px;">Итоги</h3>
+                    <div class="summary-card" id="summary-card-click" style="cursor: pointer;">
+                    <h3 class="summary-title" style="margin-bottom: 10px;">Итого</h3>
 
-                    <!-- Кольцо с процентом -->
-                    <div class="summary-inline">
+                    <!-- Кольцо с процентом (кликабельное) -->
+                    <div class="summary-inline summary-clickable">
                     <div class="summary-ring" id="summary-ring"></div>
                     <div class="summary-big" id="summary-percent-out">0%</div>
                     </div>
 
                     <!-- Два KPI: Экономия (отрицательные) / Перерасход (положительные) -->
-                    <div class="kpis" style="margin-bottom: 16px;">
-                        <div class="kpi">
+                    <div class="kpis" style="margin-bottom: 8px;">
+                        <div class="kpi" style="position: relative;">
+                        <span style="position: absolute; top: 2px; right: 2px; background-color: #c0392b; color: white; font-size: 7px; padding: 1px 4px; border-radius: 3px;">в разработке</span>
                         <div class="kpi-label" id="kpi-rub-label">Резервы, ₽</div>
                         <div class="kpi-value" id="kpi-rub">—</div>
                         </div>
-                        <div class="kpi">
+                        <div class="kpi" style="position: relative;">
+                        <span style="position: absolute; top: 2px; right: 2px; background-color: #c0392b; color: white; font-size: 7px; padding: 1px 4px; border-radius: 3px;">в разработке</span>
                         <div class="kpi-label" id="kpi-tut-label">Резервы, ТУТ</div>
                         <div class="kpi-value" id="kpi-tut">—</div>
                         </div>
@@ -531,25 +607,30 @@
                     </div>
 
                     <div class="gauge-card">
-                    <h3 class="gauge-title">Турбины</h3>
+                    <h3 class="gauge-title">Турбины (УРТ)</h3>
                     <svg id="gauge-2" class="gauge-svg" viewBox="0 20 320 160" preserveAspectRatio="xMidYMid meet"></svg>
                     </div>
                 </div>
                 <div class="bars-container">
-                    <div class="bar-card">
-                        <div class="mini-title">Пережоги Котлы</div>
-                        <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
-                        <svg id="bars-left" class="mini-svg"></svg>
+                    <!-- Блоки с барами (по умолчанию видны) -->
+                    <div id="bars-content" style="display: flex; gap: 8px; width: 100%;">
+                        <div class="bar-card" style="position: relative;">
+                            <span style="position: absolute; top: 4px; right: 4px; background-color: #c0392b; color: white; font-size: 8px; padding: 2px 5px; border-radius: 3px;">в разработке</span>
+                            <div class="mini-title">Котлы - потери тепла (КПД)</div>
+                            <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
+                            <svg id="bars-left" class="mini-svg"></svg>
                         </div>
 
-                        <div class="bar-card">
-                        <div class="mini-title">Пережоги Турбины</div>
-                        <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
-                        <svg id="bars-right" class="mini-svg"></svg>
+                        <div class="bar-card" style="position: relative;">
+                            <span style="position: absolute; top: 4px; right: 4px; background-color: #c0392b; color: white; font-size: 8px; padding: 2px 5px; border-radius: 3px;">в разработке</span>
+                            <div class="mini-title">Турбины - резервы (РТЭ)</div>
+                            <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
+                            <svg id="bars-right" class="mini-svg"></svg>
+                        </div>
                     </div>
-                </div>
-                <div class="lines-container" style="margin-bottom: 4px;">
-                    <div class="line-card">
+
+                    <!-- График Экономия (по умолчанию скрыт) -->
+                    <div id="economy-chart-container" class="line-card" style="display: none; flex: 1; margin: 0; margin-left: 0; width: 100%; max-height: 100%; overflow: hidden;">
                         <div class="line-title" style="text-align:center;">Котлы / Турбины / Итоги (сумма)</div>
 
                         <!-- ПАНЕЛЬ ПЕРЕКЛЮЧАТЕЛЕЙ -->
@@ -579,15 +660,20 @@
                         <span class="sw sw-area-total"></span>Итоги (прошл.)
                         </div>
 
-                        <svg id="line-multi" class="line-svg" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet"></svg>
+                        <svg id="line-multi" class="line-svg" viewBox="0 0 1000 270" preserveAspectRatio="xMidYMid meet"></svg>
                     </div>
                 </div>
 
             </div>
-            <div class="rating-container">
-                <h2 style="margin-bottom: 10px;margin-top: 5px;">Рейтинг:</h2>
             </div>
         </div>
+    </div>
+    <div class="rating-container" id="rating-container-index">
+        <div class="rating-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; margin-top: 5px;">
+            <h2 style="margin: 0; font-size: 14px;">Рейтинг:</h2>
+            <button id="toggle-all-index" class="toggle-all-btn" title="Выбрать/Снять все" style="font-size: 14px; padding: 2px 8px;">☑</button>
+        </div>
+        <div class="rating-cards-wrapper" id="rating-cards-index"></div>
     </div>
     
     <div id="tooltip" class="tooltip"></div> <!-- Специальный элемент для всплывающей подсказки -->
@@ -759,47 +845,103 @@
     const turbinsData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Turbines));
     const boilersData = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Boilers));
     const PRECALC_RESERVES_RUB = @Model.ReservesRub.ToString(System.Globalization.CultureInfo.InvariantCulture);
+    const RESERVES_RUB_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.ReservesRubByStation));
+    // Цена ТУТ по станциям (руб./ТУТ). Пустой объект для годового периода.
+    const PRICE_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.PriceByStation));
+    // Для годового периода: рубли по станциям = SUM месячных reserves_rub (не yearly aggregate).
+    // Гарантирует совпадение с суммой месячных значений.
+    const YEARLY_RUB_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.YearlyRubByStationFromMonthly));
+    // Только турбины по станциям за год — для исключения ТЭЦ-турбин при активной галочке.
+    const YEARLY_TURB_RUB_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.YearlyTurbRubByStation));
 
     // Читаем настройку исключения турбин ТЭЦ из localStorage (по умолчанию true)
     const excludeTecFromUrl = localStorage.getItem('excludeTecTurbines') !== 'false';
+
+    // Читаем состояние выбора оборудования из localStorage
+    const _eqStateRaw = (() => {
+        try { return JSON.parse(localStorage.getItem('equipmentSelectionState') || '{}'); }
+        catch(e) { return {}; }
+    })();
+    const eqTurbines = _eqStateRaw.turbines || {};
+    const eqBoilers  = _eqStateRaw.boilers  || {};
+
+    // Вычисляем долю ВКЛЮЧЁННОГО оборудования по каждой станции (для пропорционального пересчёта
+    // годовых рублей и графика, где данные хранятся как агрегаты на уровне станции).
+    const stationTurbFrac = {};  // stId -> доля потребления включённых турбин (0–1)
+    const stationBoilFrac = {};  // stId -> доля выработки включённых котлов (0–1)
+    (() => {
+        const tTotal = {}, tIncl = {}, bTotal = {}, bIncl = {};
+        turbinsData.forEach(item => {
+            const sid = item.StationID;
+            const con = item.Consumption || 0;
+            tTotal[sid] = (tTotal[sid] || 0) + con;
+            const key = `${sid}_${item.TurbinID}`;
+            const isTec = tecStations.includes(sid);
+            const excl = (eqTurbines[key] === false) || (excludeTecFromUrl && isTec);
+            if (!excl) tIncl[sid] = (tIncl[sid] || 0) + con;
+        });
+        boilersData.forEach(item => {
+            const sid = item.StationID;
+            const prod = item.Production || 0;
+            bTotal[sid] = (bTotal[sid] || 0) + prod;
+            const key = `${sid}_${item.BoilerID}`;
+            if (eqBoilers[key] !== false) bIncl[sid] = (bIncl[sid] || 0) + prod;
+        });
+        for (const sid of Object.keys(tTotal)) {
+            const total = tTotal[sid];
+            stationTurbFrac[parseInt(sid)] = total > 0 ? (tIncl[sid] || 0) / total : 0;
+        }
+        for (const sid of Object.keys(bTotal)) {
+            const total = bTotal[sid];
+            stationBoilFrac[parseInt(sid)] = total > 0 ? (bIncl[sid] || 0) / total : 0;
+        }
+    })();
 
         // Форматируем данные в иерархическом виде
     const hierarchicalData_turbin = {
         name: "Turbines",
         children: turbinsData.map(item => {
-            // ✅ ИЗМЕНЕНО: Сначала пытаемся взять NominalURT из БД
+            // NominalURT из БД: если АСТЭП передал nominal_urt > 0, то уже = nominal_urt + variation
+            // Если не передал — хранится 0, надо взять из normative_config и добавить variation
             let nominalValue = item.NominalURT || 0;
+            const variation = item.Variation || 0;
 
-            // ✅ Если значение из БД равно 0, берем из массива нормативов (fallback)
-            if (nominalValue === 0) {
+            // NominalURT < 500 → АСТЭП не дал nominal_urt (реальный УРТ всегда > 700 г/кВт·ч)
+            // Берём базу из normative_config и прибавляем variation
+            if (nominalValue < 500) {
                 const stationUrtValues = urtvalues[item.StationID];
                 const turbinKey = parseInt(item.TurbinID);
-
+                let baseURT = 0;
                 if (stationUrtValues && stationUrtValues[turbinKey] && stationUrtValues[turbinKey] > 0) {
-                    nominalValue = stationUrtValues[turbinKey];
+                    baseURT = stationUrtValues[turbinKey];
                 } else {
-                    // Если и в массиве нет данных, используем дефолтное значение
-                    nominalValue = 2300;
+                    baseURT = 2300;
                 }
+                nominalValue = baseURT + variation;
             }
 
             // Если включено исключение турбин ТЭЦ и станция - ТЭЦ, обнуляем рейтинг
             const isTecStation = tecStations.includes(item.StationID);
-            const shouldExclude = excludeTecFromUrl && isTecStation;
+            const equipKeyT = `${item.StationID}_${item.TurbinID}`;
+            const isEquipEnabled = eqTurbines[equipKeyT] !== false;
+            const shouldExclude = !isEquipEnabled || (excludeTecFromUrl && isTecStation);
 
             return {
                 urt: item.URT,
                 size: shouldExclude ? 0 : item.Consumption, // Обнуляем вес для ТЭЦ турбин
                 station: item.StationID,
                 turbin: item.TurbinID,
-                urt_percent: shouldExclude ? 0 : (((item.URT - nominalValue) / item.URT) * 100),
+                urt_percent: shouldExclude ? 0 : (((item.URT - nominalValue) / nominalValue) * 100),
                 urt_percent_normal: nominalValue,
-                excluded: shouldExclude // Флаг для визуализации
+                excluded: shouldExclude, // Флаг для визуализации
+                generation_ee: item.GenerationEE || 0,
+                kpd_netto: item.KpdNetto || 0,
+                koeff_tp: item.KoeffTP || 0
             };
         })
     };
 
-        
+
         const hierarchicalData_boiler = {
     name: "Boilers",
     children: boilersData.map(item => {
@@ -827,18 +969,26 @@
 
         const kpdValue = kpdvalues[stationID] ? kpdvalues[stationID][boilerID] : undefined;
         const baseKPD = kpdValue > 0 ? kpdValue : 91;
-        const kpd_percent = (((item.KPD - baseKPD) / item.KPD) * 100);
-        const kpd_percent_normal = baseKPD;
+        // Поправки применяются к нормативу: adjustedNorm = baseKPD - KPD_correction
+        // KPD хранится сырым, KPD_correction = humidity + ash - (temp_fact - temp_nominal) * temp_koef
+        const kpdCorrection = item.KPD_correction || 0;
+        const adjustedNorm = baseKPD - kpdCorrection;
+        const kpd_percent = (((item.KPD - adjustedNorm) / adjustedNorm) * 100);
+        const kpd_percent_normal = adjustedNorm;
+
+        const equipKeyB = `${item.StationID}_${item.BoilerID}`;
+        const isBoilerEnabled = eqBoilers[equipKeyB] !== false;
 
         return {
             kpd: item.KPD,
-            size: item.Consumption,
+            size: isBoilerEnabled ? item.Production : 0,  // Исключённые котлы обнуляем
+            consumption: item.Consumption,   // Для tooltip сохраняем расход топлива
             station: item.StationID,
             boiler: item.BoilerID,
-            kpd_percent: kpd_percent,
+            kpd_percent: isBoilerEnabled ? kpd_percent : 0,
             kpd_percent_normal: kpd_percent_normal
         };
-    }) 
+    })
 };
 
         // Объединяем данные и сортируем по StationID
@@ -847,28 +997,27 @@
         
         // Функция для вычисления рейтинга
         function calculateRating(group) {
-        const sumUrtPercent = group.reduce((acc, curr) => {
-        const value = curr.urt_percent !== undefined ? curr.urt_percent : 0;
-        return acc + parseFloat(value) * curr.size * -1;
-        }, 0);
+            const stationId = group.length > 0 ? group[0].station : null;
+            const isTec = tecStations.includes(parseInt(stationId));
+            const excludeTurbines = excludeTecTurbinesFlag && isTec;
 
-        const sumKpdPercent = group.reduce((acc, curr) => {
-            const value = curr.kpd_percent !== undefined ? curr.kpd_percent : 0;
-            return acc + parseFloat(value) * curr.size;
-        }, 0);
+            // Котлы: взвешенный средний kpd_percent
+            const boilers = group.filter(d => d.kpd_percent !== undefined);
+            const boilerWeightSum = boilers.reduce((acc, d) => acc + d.size, 0);
+            const boilerRating = boilerWeightSum !== 0
+                ? boilers.reduce((acc, d) => acc + d.kpd_percent * d.size, 0) / boilerWeightSum
+                : 0;
 
-        const totalSum = group.reduce((acc, curr) => acc + curr.size, 0);
+            // Турбины: взвешенный средний urt_percent
+            const turbines = excludeTurbines ? [] : group.filter(d => d.urt_percent !== undefined);
+            const turbineWeightSum = turbines.reduce((acc, d) => acc + d.size, 0);
+            const turbineRating = turbineWeightSum !== 0
+                ? turbines.reduce((acc, d) => acc + d.urt_percent * d.size, 0) / turbineWeightSum
+                : 0;
 
-        // Определяем StationID из группы
-        const stationId = group.length > 0 ? group[0].station : null;
-
-        // Если галочка включена и это ТЭЦ - не умножаем на 2 (только котлы)
-        const isTec = tecStations.includes(parseInt(stationId));
-        const multiplier = (excludeTecTurbinesFlag && isTec) ? 1 : 2;
-
-        // Проверка на случай, если totalSum равен 0
-        return totalSum !== 0 ? (sumUrtPercent + sumKpdPercent) * multiplier / totalSum : 0;
-
+            // Итоговая формула: ((100 + boilerRating) / (100 - turbineRating) - 1) * 100
+            // turbineRating > 0 = перерасход → знаменатель уменьшается → рейтинг растёт (показывает резерв)
+            return ((100 + boilerRating) / (100 - turbineRating) - 1) * 100;
         }
 
         // ... (весь предыдущий код остается без изменений до создания рейтинга)
@@ -910,10 +1059,11 @@ const temp = stationsWithoutData.filter(station => station.hasData !== true);
 // Объединяем: сначала станции с данными, потом без данных
 const allRatings = [...ratings, ...temp];
 
+// Сохраняем рейтинг в localStorage для синхронизации с Visualisation
+localStorage.setItem('altairRatings', JSON.stringify(allRatings));
 
-
-// Выбираем контейнер рейтинга
-const ratingContainer = d3.select('.rating-container');
+// Выбираем контейнер рейтинга (карточки добавляем в wrapper)
+const ratingContainer = d3.select('#rating-cards-index');
 
 function selectColorForRating(rt, hasData) {
     if (!hasData) return 'score-value-0'; // ✅ Серый для станций без данных
@@ -975,11 +1125,114 @@ allRatings.forEach((rating, index) => {
     ratingInfo.append('span')
         .attr('class', selectColorForRating(rating.rating, rating.hasData))
         .text(rating.hasData ? `${rating.rating.toFixed(2)}%` : 'Нет данных');
-    
-   
+
+    // Чекбокс справа (только для станций с данными)
+    if (rating.hasData) {
+        const checkboxDiv = cardDiv.append('div')
+            .attr('class', 'radio-btn')
+            .on('click', function(e) {
+                e.stopPropagation();
+                // Сохраняем состояние чекбоксов в localStorage
+                saveCheckboxState();
+            });
+
+        // Загружаем состояние из localStorage
+        const savedState = JSON.parse(localStorage.getItem('stationCheckboxState') || '{}');
+        const isChecked = savedState[rating.StationID] !== undefined ? savedState[rating.StationID] : true;
+
+        checkboxDiv.append('input')
+            .attr('type', 'checkbox')
+            .attr('name', 'station-index')
+            .attr('data-station-id', rating.StationID)
+            .attr('id', `station-index-${rating.StationID}`)
+            .property('checked', isChecked);
+    }
 });
 
-    function drawGauge(svgId, value, { start = -Math.PI/2, end = Math.PI/2, orient = 'auto' } = {}){
+// Функция сохранения состояния чекбоксов и обновления гейджей
+function saveCheckboxState() {
+    const state = {};
+    d3.selectAll('input[name="station-index"]').each(function() {
+        const stationId = d3.select(this).attr('data-station-id');
+        state[stationId] = d3.select(this).property('checked');
+    });
+    localStorage.setItem('stationCheckboxState', JSON.stringify(state));
+    // Обновляем гейджи при изменении чекбоксов
+    if (typeof updateAllGauges === 'function') {
+        updateAllGauges();
+    }
+}
+
+// Кнопка "Выбрать/Снять все" для Index
+// Определяем начальное состояние на основе сохранённых чекбоксов
+const savedStateInit = JSON.parse(localStorage.getItem('stationCheckboxState') || '{}');
+let allCheckedIndex = Object.keys(savedStateInit).length === 0 || Object.values(savedStateInit).every(v => v === true);
+document.getElementById('toggle-all-index').textContent = allCheckedIndex ? '☑' : '☐';
+
+document.getElementById('toggle-all-index').addEventListener('click', function() {
+    allCheckedIndex = !allCheckedIndex;
+    d3.selectAll('input[name="station-index"]').property('checked', allCheckedIndex);
+    this.textContent = allCheckedIndex ? '☑' : '☐';
+    saveCheckboxState();
+});
+
+// Автоподбор размера шрифта для рейтинга
+function fitRatingFontSize() {
+    const container = document.getElementById('rating-container-index');
+    const wrapper = document.getElementById('rating-cards-index');
+    if (!container || !wrapper) return;
+
+    // Используем полную доступную высоту контейнера
+    const availableHeight = window.innerHeight - 60 - 45; // минус header и footer
+
+    // Ограничиваем высоту контейнера
+    container.style.height = availableHeight + 'px';
+    container.style.bottom = 'auto';
+
+    // Высота для карточек (минус заголовок ~35px)
+    const cardsAvailableHeight = availableHeight - 35;
+    wrapper.style.maxHeight = cardsAvailableHeight + 'px';
+    wrapper.style.overflow = 'hidden';
+
+    const cards = wrapper.querySelectorAll('.rating-card');
+    if (cards.length === 0) return;
+
+    // Начинаем с большого шрифта и уменьшаем пока не поместится
+    let fontSize = 20;
+    const minFontSize = 6;
+
+    while (fontSize >= minFontSize) {
+        wrapper.style.fontSize = fontSize + 'px';
+
+        // Проверяем, помещается ли всё по высоте
+        let totalHeight = 0;
+        cards.forEach(card => {
+            totalHeight += card.offsetHeight;
+        });
+
+        // Проверяем, не переполняется ли текст по ширине в каждой карточке
+        let textFits = true;
+        cards.forEach(card => {
+            const ratingInfo = card.querySelector('.rating-info');
+            if (ratingInfo && ratingInfo.scrollWidth > ratingInfo.clientWidth) {
+                textFits = false;
+            }
+        });
+
+        if (totalHeight <= cardsAvailableHeight && textFits) {
+            const finalSize = fontSize - 1;
+            wrapper.style.fontSize = finalSize + 'px';
+            break;
+        }
+        fontSize -= 0.5;
+    }
+}
+
+// Вызываем после загрузки и при ресайзе
+setTimeout(fitRatingFontSize, 100);
+window.addEventListener('resize', fitRatingFontSize);
+
+    function drawGauge(svgId, value, { start = -Math.PI/2, end = Math.PI/2, orient = 'auto', displayMultiplier = 1 } = {}){
   const svg = d3.select('#'+svgId);
   svg.selectAll('*').remove();
 
@@ -991,31 +1244,16 @@ allRatings.forEach((rating, index) => {
   const rInner = 85;
   const cy = 160;
 
-  // Определяем цвет на основе значения: зелёный для положительных, красный для отрицательных
-  const valueColor = value >= 0 ? '#00d26a' : '#EF4156';
-  const valueColorLight = value >= 0 ? '#00ff88' : '#ff6b6b';
+  // Определяем цвет на основе значения: красный для отрицательных, зелёный для неотрицательных
+  const arcColor = value < 0 ? '#EF4156' : '#00d26a';
+  const textColor = value < 0 ? '#EF4156' : '#00d26a';
 
   // Кламп значения для дуги (от 0 до 100, где 50 = 0%)
   // Значение от -5% до +5% отображается от 0 до 100
   const normalizedValue = Math.max(0, Math.min(100, 50 + value * 10)); // -5% = 0, 0% = 50, +5% = 100
 
-  // Группа в центре — ВСЁ рисуем внутри неё (градиент тоже в её системе)
+  // Группа в центре
   const gRoot = svg.append('g').attr('transform', `translate(${cx},${cy})`);
-
-  // --- Градиент для дуги: красный слева, зелёный справа ---
-  const defs = svg.append('defs');
-  const gradId = `grad-${svgId}`;
-
-  const g = defs.append('linearGradient')
-    .attr('id', gradId)
-    .attr('gradientUnits', 'userSpaceOnUse')
-    .attr('x1', -rOuter).attr('y1', 0)
-    .attr('x2', rOuter).attr('y2', 0);
-
-  // Градиент: красный (плохо) -> жёлтый (нейтрально) -> зелёный (хорошо)
-  g.append('stop').attr('offset', '0%').attr('stop-color', '#EF4156');   // красный (левая часть = минус)
-  g.append('stop').attr('offset', '50%').attr('stop-color', '#ffd400');  // жёлтый (середина = ноль)
-  g.append('stop').attr('offset', '100%').attr('stop-color', '#00d26a'); // зелёный (правая часть = плюс)
 
   // Шкала угла
   const scale = d3.scaleLinear().domain([0,100]).range([start, end]);
@@ -1032,30 +1270,45 @@ allRatings.forEach((rating, index) => {
     .attr('stroke', '#666')
     .attr('stroke-width', 2);
 
-  // Заполненная часть дуги
+  // Заполненная часть дуги - один цвет без градиента
   gRoot.append('path')
     .attr('d', d3.arc().innerRadius(rInner).outerRadius(rOuter).startAngle(start).endAngle(scale(normalizedValue)))
-    .attr('fill', `url(#${gradId})`);
+    .attr('fill', arcColor);
 
   // Число по центру с цветом зависящим от знака
-  const c = value > 0 ? '+' : '';
+  // displayMultiplier позволяет отображать значение с другим знаком (напр. -1 для УРТ)
+  const displayValue = value * displayMultiplier;
+  const c = displayValue > 0 ? '+' : '';
   gRoot.append('text')
     .attr('x', 0).attr('y', -10)
     .attr('text-anchor','middle')
-    .attr('fill', valueColor)
+    .attr('fill', textColor)
     .attr('font-family','sans-serif').attr('font-size','28px').attr('font-weight','700')
-    .text(`${c}${value.toFixed(2)}%`);
+    .text(`${c}${displayValue.toFixed(2)}%`);
 }
 // ---- Расчёт средневзвешенного рейтинга для котлов и турбин ----
 // Для котлов: взвешиваем по выработке тепла (Production/size)
 // Для турбин: взвешиваем по расходу топлива (Consumption/size)
 
-function calculateWeightedRatingBoilers(boilersArray) {
+function getSelectedStations() {
+    const savedState = JSON.parse(localStorage.getItem('stationCheckboxState') || '{}');
+    // Если состояние пустое - все станции выбраны
+    if (Object.keys(savedState).length === 0) return null; // null означает "все"
+    // Возвращаем массив ID выбранных станций
+    return Object.entries(savedState)
+        .filter(([id, checked]) => checked)
+        .map(([id]) => parseInt(id));
+}
+
+function calculateWeightedRatingBoilers(boilersArray, selectedStations) {
     // boilersArray - массив объектов с kpd_percent и size (Production)
     let sumRatingWeighted = 0;
     let totalWeight = 0;
 
     boilersArray.forEach(boiler => {
+        // Фильтруем по выбранным станциям
+        if (selectedStations !== null && !selectedStations.includes(boiler.station)) return;
+
         const rating = boiler.kpd_percent || 0;
         const weight = boiler.size || 0; // Production - выработка тепла
 
@@ -1068,12 +1321,15 @@ function calculateWeightedRatingBoilers(boilersArray) {
     return totalWeight > 0 ? sumRatingWeighted / totalWeight : 0;
 }
 
-function calculateWeightedRatingTurbines(turbinesArray) {
+function calculateWeightedRatingTurbines(turbinesArray, selectedStations) {
     // turbinesArray - массив объектов с urt_percent и size (Consumption)
     let sumRatingWeighted = 0;
     let totalWeight = 0;
 
     turbinesArray.forEach(turbine => {
+        // Фильтруем по выбранным станциям
+        if (selectedStations !== null && !selectedStations.includes(turbine.station)) return;
+
         // Для турбин: чем выше УРТ, тем хуже. Рейтинг уже вычислен как urt_percent
         // Отрицательное значение urt_percent означает экономию (лучше нормы)
         const rating = turbine.urt_percent || 0;
@@ -1087,17 +1343,6 @@ function calculateWeightedRatingTurbines(turbinesArray) {
 
     return totalWeight > 0 ? sumRatingWeighted / totalWeight : 0;
 }
-
-// Вычисляем общие рейтинги
-const GAUGE_LEFT = calculateWeightedRatingBoilers(hierarchicalData_boiler.children);   // Котлы
-const GAUGE_RIGHT = calculateWeightedRatingTurbines(hierarchicalData_turbin.children) * -1;  // Турбины (инвертируем, т.к. для турбин отрицательный % = хорошо)
-
-console.log('Общий рейтинг котлов (средневзвешенный по выработке тепла):', GAUGE_LEFT.toFixed(2) + '%');
-console.log('Общий рейтинг турбин (средневзвешенный по расходу топлива):', GAUGE_RIGHT.toFixed(2) + '%');
-
-// Рисуем спидометры с вычисленными значениями
-drawGauge('gauge-1', GAUGE_LEFT);
-drawGauge('gauge-2', GAUGE_RIGHT);
 
 // ---- Расчёт резервов в ТУТ по алгоритму изменения расхода топлива ----
 // Формулы из файла "Алгоритм расчета изменения расхода топлива.xlsx":
@@ -1113,36 +1358,107 @@ drawGauge('gauge-2', GAUGE_RIGHT);
 //
 // Итого ТУТ = SUM(∆ВТА) + SUM(∆ВКА)
 
-const ETA_KN = 85;   // КПД котлов нетто, %
-const ETA_TP = 98;   // Коэффициент теплового потока, %
+const DEFAULT_ETA_KN = 85;   // КПД котлов нетто (по умолчанию), %
+const DEFAULT_ETA_TP = 98;   // Коэффициент теплового потока (по умолчанию), %
 
-// Расчёт ∆ВТА по каждой турбине
-let totalDeltaTurbines = 0;
-hierarchicalData_turbin.children.forEach(t => {
-    if (t.excluded) return; // пропускаем исключённые ТЭЦ турбины
-    if (t.size <= 0) return;
-    const urtFact = t.urt;
-    const urtKR = t.urt_percent_normal; // NominalURT (из БД или конфига)
-    const consumption = t.size;          // Consumption = выработка э/э
-    const deltaQ = urtFact - urtKR;      // ∆qТ(БР)
-    const deltaBTA = deltaQ * consumption / 7000 / (ETA_KN / 100) / (ETA_TP / 100);
-    totalDeltaTurbines += deltaBTA;
-});
+function calculateReserves(selectedStations) {
+    // Расчёт ∆ВТА по каждой турбине (новая формула)
+    // отклонение_УРТ = УРТ_норм - УРТ_факт
+    // ∆ВТА = отклонение_УРТ * Выработка_ЭЭ / 7000 / (КПД_нетто/100) / (Коэфф_ТП/100)
+    let totalDeltaTurbines = 0;
+    hierarchicalData_turbin.children.forEach(t => {
+        if (selectedStations !== null && !selectedStations.includes(t.station)) return;
+        if (t.excluded) return;
+        if (t.size <= 0) return;
+        const urtFact = t.urt;
+        const urtNorm = t.urt_percent_normal;
+        const deltaURT = urtFact - urtNorm;
+        const genEE = (t.generation_ee > 0) ? t.generation_ee : t.size;
+        const kpdN = (t.kpd_netto > 0) ? t.kpd_netto : DEFAULT_ETA_KN;
+        const kTP = (t.koeff_tp > 0) ? t.koeff_tp : DEFAULT_ETA_TP;
+        const deltaBTA = deltaURT * genEE / 7000 / (kpdN / 100) / (kTP / 100);
+        totalDeltaTurbines += deltaBTA;
+    });
 
-// Расчёт ∆ВКА по каждому котлу
-let totalDeltaBoilers = 0;
-hierarchicalData_boiler.children.forEach(b => {
-    if (b.size <= 0) return;
-    const kpdFact = b.kpd;
-    const kpdKR = b.kpd_percent_normal;  // КПД после КР (из конфига или дефолт)
-    const consumption = b.size;           // Consumption = расход топлива фактический
-    const deltaBKA = (kpdKR - kpdFact) / 100 * consumption;
-    totalDeltaBoilers += deltaBKA;
-});
+    // Расчёт ∆ВКА по каждому котлу
+    let totalDeltaBoilers = 0;
+    hierarchicalData_boiler.children.forEach(b => {
+        if (selectedStations !== null && !selectedStations.includes(b.station)) return;
+        if (b.size <= 0) return;
+        const kpdFact = b.kpd;
+        const kpdKR = b.kpd_percent_normal;
+        const consumption = b.size;
+        const deltaBKA = (kpdKR - kpdFact) / 100 * consumption;
+        totalDeltaBoilers += deltaBKA;
+    });
 
-const RESERVES_TUT = totalDeltaTurbines + totalDeltaBoilers;
-// Резервы в рублях — предрассчитаны на бэкенде (SUM по дням для месяца, SUM по месяцам для года)
-const RESERVES_RUB = PRECALC_RESERVES_RUB;
+    return totalDeltaTurbines + totalDeltaBoilers;
+}
+
+// Начальные значения
+let GAUGE_LEFT = 0;
+let GAUGE_RIGHT = 0;
+let RESERVES_TUT = 0;
+let RESERVES_RUB = PRECALC_RESERVES_RUB;
+
+// Расчёт рублей: ТУТ_по_станции × цена_по_станции.
+// Для суточного и месячного периода: берём цену из PRICE_BY_STATION (загружена из raw_fuel_prices_monthly).
+// Для годового периода: PRICE_BY_STATION пустой — суммируем месячные рубли из YEARLY_RUB_BY_STATION.
+// Фильтры станций и галочка ТЭЦ работают идентично calculateReserves().
+function calculateReservesRub(selectedStations) {
+    // Годовой период — суммируем месячные рубли из БД по выбранным станциям.
+    // Применяем пропорциональное масштабирование на основе доли включённого оборудования.
+    if (Object.keys(PRICE_BY_STATION).length === 0) {
+        let total = 0;
+        for (const [stId, val] of Object.entries(YEARLY_RUB_BY_STATION)) {
+            const stationId = parseInt(stId);
+            if (selectedStations !== null && !selectedStations.includes(stationId)) continue;
+            let stationTurbRub = YEARLY_TURB_RUB_BY_STATION[stId] || 0;
+            let stationBoilRub = val - stationTurbRub;
+            // Применяем исключение ТЭЦ: обнуляем долю турбин для ТЭЦ-станций
+            if (excludeTecFromUrl && tecStations.includes(stationId)) {
+                stationTurbRub = 0;
+            }
+            // Пропорциональный учёт включённого оборудования внутри станции
+            const turbFrac = stationTurbFrac[stationId] !== undefined ? stationTurbFrac[stationId] : 1.0;
+            const boilFrac = stationBoilFrac[stationId] !== undefined ? stationBoilFrac[stationId] : 1.0;
+            total += stationTurbRub * turbFrac + stationBoilRub * boilFrac;
+        }
+        return total;
+    }
+
+    // Суточный/месячный период: считаем ТУТ по каждой станции, умножаем на цену
+    const tutByStation = {};
+
+    // Турбины (с учётом флага excluded — галочка ТЭЦ)
+    hierarchicalData_turbin.children.forEach(t => {
+        if (selectedStations !== null && !selectedStations.includes(t.station)) return;
+        if (t.excluded) return;   // ТЭЦ исключена
+        if (t.size <= 0) return;
+        const deltaURT = t.urt - t.urt_percent_normal;
+        const genEE = (t.generation_ee > 0) ? t.generation_ee : t.size;
+        const kpdN  = (t.kpd_netto > 0) ? t.kpd_netto : DEFAULT_ETA_KN;
+        const kTP   = (t.koeff_tp  > 0) ? t.koeff_tp  : DEFAULT_ETA_TP;
+        const deltaBTA = deltaURT * genEE / 7000 / (kpdN / 100) / (kTP / 100);
+        tutByStation[t.station] = (tutByStation[t.station] || 0) + deltaBTA;
+    });
+
+    // Котлы
+    hierarchicalData_boiler.children.forEach(b => {
+        if (selectedStations !== null && !selectedStations.includes(b.station)) return;
+        if (b.size <= 0) return;
+        const deltaBKA = (b.kpd_percent_normal - b.kpd) / 100 * b.size;
+        tutByStation[b.station] = (tutByStation[b.station] || 0) + deltaBKA;
+    });
+
+    // Рубли = ТУТ × цена для каждой станции
+    let total = 0;
+    for (const [stId, tut] of Object.entries(tutByStation)) {
+        const price = PRICE_BY_STATION[parseInt(stId)] || 0;
+        total += tut * price;
+    }
+    return total;
+}
 
 const fmtInt = d3.format(",");
 const fmtRu = n => fmtInt(Math.round(n)).replace(/,/g, " ");
@@ -1162,9 +1478,103 @@ function colorForPercent(p){
   return t < 0.5 ? _interpRY(t*2) : _interpYG((t-0.5)*2);
 }
 
+// ---- Средневзвешенный рейтинг Итого по станциям ----
+// Для каждой станции считаем стационный рейтинг по формуле ((100+boiler)/(100-turbine)-1)*100,
+// затем взвешиваем по суммарному Production котлов этой станции.
+function calculateOverallRatingByStations(selectedStations) {
+  // Собираем данные по станциям
+  const stationMap = {};
+
+  // Котлы
+  hierarchicalData_boiler.children.forEach(b => {
+    if (selectedStations !== null && !selectedStations.includes(b.station)) return;
+    if (!stationMap[b.station]) stationMap[b.station] = { boilers: [], turbines: [] };
+    stationMap[b.station].boilers.push(b);
+  });
+
+  // Турбины
+  hierarchicalData_turbin.children.forEach(t => {
+    if (selectedStations !== null && !selectedStations.includes(t.station)) return;
+    if (!stationMap[t.station]) stationMap[t.station] = { boilers: [], turbines: [] };
+    stationMap[t.station].turbines.push(t);
+  });
+
+  let sumWeightedRating = 0;
+  let sumProduction = 0;
+
+  Object.entries(stationMap).forEach(([stId, { boilers, turbines }]) => {
+    const stationId = parseInt(stId);
+    const isTec = tecStations.includes(stationId);
+    const excludeTurbines = excludeTecTurbinesFlag && isTec;
+
+    // boilerRating — средневзвешенный kpd_percent по Production
+    const boilerWeightSum = boilers.reduce((acc, b) => acc + (b.size || 0), 0);
+    const boilerRating = boilerWeightSum > 0
+      ? boilers.reduce((acc, b) => acc + (b.kpd_percent || 0) * (b.size || 0), 0) / boilerWeightSum
+      : 0;
+
+    // turbineRating — средневзвешенный urt_percent по Consumption
+    const activeTurbines = excludeTurbines ? [] : turbines;
+    const turbineWeightSum = activeTurbines.reduce((acc, t) => acc + (t.size || 0), 0);
+    const turbineRating = turbineWeightSum > 0
+      ? activeTurbines.reduce((acc, t) => acc + (t.urt_percent || 0) * (t.size || 0), 0) / turbineWeightSum
+      : 0;
+
+    // Рейтинг станции для Итого-gauge: формула с (100 + turbineRating)
+    // (отличается от per-station calculateRating, где знаменатель (100 - turbineRating))
+    const stationRating = ((100 + boilerRating) / (100 + turbineRating) - 1) * 100;
+
+    // Вес = суммарный Production котлов станции
+    const stationProduction = boilerWeightSum;
+
+    if (stationProduction > 0) {
+      sumWeightedRating += stationRating * stationProduction;
+      sumProduction += stationProduction;
+    }
+  });
+
+  return sumProduction > 0 ? sumWeightedRating / sumProduction : 0;
+}
+
+// Итоговый рейтинг Итого (средневзвешенный по станциям)
+let OVERALL_RATING = 0;
+
+// Флаг видимости графика экономии (объявлен здесь, до updateAllGauges, чтобы избежать TDZ-ошибки)
+let economyVisible = false;
+
+// ---- Функция обновления всех гейджей на основе выбранных станций ----
+function updateAllGauges() {
+  const selectedStations = getSelectedStations();
+
+  // Вычисляем рейтинги с учётом фильтра
+  GAUGE_LEFT = calculateWeightedRatingBoilers(hierarchicalData_boiler.children, selectedStations);
+  GAUGE_RIGHT = calculateWeightedRatingTurbines(hierarchicalData_turbin.children, selectedStations) * -1;
+  OVERALL_RATING = calculateOverallRatingByStations(selectedStations);
+  RESERVES_TUT = calculateReserves(selectedStations);
+  RESERVES_RUB = calculateReservesRub(selectedStations);
+
+  console.log('Обновление гейджей. Выбранные станции:', selectedStations);
+  console.log('Котлы:', GAUGE_LEFT.toFixed(2) + '%', 'Турбины:', GAUGE_RIGHT.toFixed(2) + '%', 'Итого:', OVERALL_RATING.toFixed(2) + '%');
+
+  // Перерисовываем спидометры
+  drawGauge('gauge-1', GAUGE_LEFT);
+  drawGauge('gauge-2', GAUGE_RIGHT, { displayMultiplier: -1 });
+
+  // Обновляем карточку «Итоги»
+  updateSummary();
+
+  // Перерисовываем график экономии если открыт (безопасный вызов — до инициализации функция не определена)
+  if (typeof economyVisible !== 'undefined' && economyVisible && typeof rerender === 'function') {
+    rerender();
+  }
+}
+
 // ---- Обновляем карточку «Итоги» ----
-(function updateSummary(){
-  const overall = (200 + GAUGE_LEFT + GAUGE_RIGHT) / 2;           // простое среднее
+function updateSummary(){
+  // overall для кольца: шкала 0–100, 50 = ноль, >50 = положительный рейтинг
+  // Ограничиваем OVERALL_RATING диапазоном [-100, 100] для отображения
+  const clampedRating = Math.max(-100, Math.min(100, OVERALL_RATING));
+  const overall = 50 + clampedRating / 2;
   const ring = document.getElementById('summary-ring');
   const percentOut = document.getElementById('summary-percent-out');
   const rubEl = document.getElementById('kpi-rub');
@@ -1172,7 +1582,7 @@ function colorForPercent(p){
   const rubLabelEl = document.getElementById('kpi-rub-label');
   const tutLabelEl = document.getElementById('kpi-tut-label');
 
-  const totalValue = GAUGE_LEFT + GAUGE_RIGHT;
+  const totalValue = OVERALL_RATING;   // средневзвешенный по станциям
   const c = totalValue > 0 ? '+' : '';
 
   // Цвет: зелёный для положительных, красный для отрицательных
@@ -1204,7 +1614,16 @@ function colorForPercent(p){
 
   rubEl.textContent = `₽ ${fmtMoneyRu(absRub)}`;
   rubEl.style.color = valueColor;
-})();
+}
+
+// Первоначальный расчёт и отрисовка
+updateAllGauges();
+
+// Перезагружаем страницу если браузер восстановил её из BFCACHE (back-forward cache),
+// чтобы гарантировать пересчёт с актуальными настройками оборудования из localStorage.
+window.addEventListener('pageshow', function(e) {
+    if (e.persisted) { location.reload(); }
+});
 
         // ===== НАСТРОЙКИ МАСШТАБА =====
   const UNIT = 'ТУТ';                 // единица измерения
@@ -1214,21 +1633,18 @@ function colorForPercent(p){
   // ===== КОНСТАНТНЫЕ ДАННЫЕ в ТУТ (пример) =====
   // Две серии (a и b) на каждый показатель.
   const LEFT_BARS2 = [
-    { label: 'Присосы воздуха КА', a: 1250, b: 980 },
-    { label: 'Хим. и мех. недожоги', a: 840,  b: 920 },
-    { label: 'Избыток воздуха в РС', a: 1630, b: 1510 },
-    { label: 'Температура ух.газов', a: 690,  b: 730 },
-    { label: 'Расход ээ и тэ', a: 1420, b: 1330 },
+    { label: 'С уходящими газами, q₂', a: 1250, b: 980 },
+    { label: ['От хим. и мех. неполноты',' сгорания топлива, q₃ q₄'], a: 840,  b: 920 },
+    { label: 'От наружного охлаждения котла, q₅', a: 1630, b: 1510 },
+    { label: 'С физ. теплом шлака, q₆', a: 690,  b: 730 },
+    { label: 'Фактор паровой нагрузки, Dпп', a: 1420, b: 1330 },
   ];
   const RIGHT_BARS2 = [
-    { label: 'Давление пара в конденсаторе', a: 910,  b: 820 },
-    { label: 'Работа дубль-блоков с 1 корп', a: 1970, b: 1820 },
-    { label: 'Температура ПВ', a: 1360, b: 1480 },
-    { label: 'Температура св.пара', a: 1210, b: 990  },
-    { label: 'Давление св.пара', a: 1210, b: 990  },
-    { label: 'Температура пара после пп', a: 1210, b: 990  },
-    { label: 'Давление пара в рег. отборах', a: 780,  b: 860  },
-    { label: 'Неплановые пуски', a: 660,  b: 590  },
+    { label: 'Вакуум, W', a: 910,  b: 820 },
+    { label: 'Температура пит. воды, Tпв', a: 1360, b: 1480 },
+    { label: 'Параметры пара, P₀, T₀, Tппп', a: 1210, b: 990  },
+    { label: 'Режим 1 корп', a: 1970, b: 1820 },
+    { label: 'Фактор эл. нагрузки, Nэ', a: 780,  b: 860  },
   ];
 
   // формат числа "1 234"
@@ -1262,7 +1678,8 @@ function drawDualBars(svgId, rows, opts = {}) {
   const mLabel = meas.append('text').attr('class','bar-label');
   const mValue = meas.append('text').attr('class','bar-value');
 
-  const labelTexts = rows.map(d => d.label);
+  // Собираем все тексты меток (включая многострочные)
+  const labelTexts = rows.flatMap(d => Array.isArray(d.label) ? d.label : [d.label]);
   const valueTexts = rows.flatMap(d => [ `${fmtTU(d.a)} ${UNIT}`, `${fmtTU(d.b)}` ]);
 
   const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
@@ -1341,12 +1758,31 @@ function drawDualBars(svgId, rows, opts = {}) {
 
   // подписи показателей — ПЕРЕД линией, справа выравниваем к оси
   const labelsG = svg.append('g').attr('transform', `translate(${axisX - 8},${padT})`);
-  labelsG.selectAll('text').data(rows).enter().append('text')
-    .attr('class','bar-label')
-    .attr('x', 0)
-    .attr('y', (_,i)=> i*(barH+gap) + barH/2 + .5)
-    .attr('text-anchor', 'end')
-    .text(d=> d.label);
+  rows.forEach((d, i) => {
+    const yCenter = i * (barH + gap) + barH / 2;
+    if (Array.isArray(d.label)) {
+      // Многострочная метка
+      const lines = d.label;
+      const lineHeight = 10;
+      const totalHeight = (lines.length - 1) * lineHeight;
+      lines.forEach((line, j) => {
+        labelsG.append('text')
+          .attr('class', 'bar-label')
+          .attr('x', 0)
+          .attr('y', yCenter - totalHeight / 2 + j * lineHeight + 0.5)
+          .attr('text-anchor', 'end')
+          .text(line);
+      });
+    } else {
+      // Однострочная метка
+      labelsG.append('text')
+        .attr('class', 'bar-label')
+        .attr('x', 0)
+        .attr('y', yCenter + 0.5)
+        .attr('text-anchor', 'end')
+        .text(d.label);
+    }
+  });
 }
 
 const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]);
@@ -1356,23 +1792,18 @@ drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX, unit: UNIT });
 
 const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
 
-// ТЕКУЩИЙ ГОД — данные резервов в рублях по месяцам (с бэкенда)
-const SERIES_BOILERS  = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyBoilersRub));
-const SERIES_TURBINES = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTurbinesRub));
-const SERIES_TOTAL    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTotalRub));
-
-// ПРОШЛЫЙ ГОД — данные резервов в рублях по месяцам (с бэкенда)
-const SERIES_BOILERS_PREV  = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyBoilersRubPrev));
-const SERIES_TURBINES_PREV = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTurbinesRubPrev));
-const SERIES_TOTAL_PREV    = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTotalRubPrev));
+// Помесячные рубли по каждой станции (стationId → [[turbines×12],[boilers×12]]).
+// Используются в transformAll() для фильтрации по галочкам станций и ТЭЦ.
+const MONTHLY_RUB_BY_STATION      = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyRubByStation));
+const MONTHLY_RUB_BY_STATION_PREV = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyRubByStationPrev));
 
 
 function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
   const svg = d3.select('#'+svgId);
   svg.selectAll('*').remove();
 
-  const W = 1000, H = 420;
-  const m = {top: 28, right: 24, bottom: 48, left: 80};
+  const W = 1000, H = 270;
+  const m = {top: 24, right: 24, bottom: 36, left: 70};
   const innerW = W - m.left - m.right;
   const innerH = H - m.top - m.bottom;
 
@@ -1470,7 +1901,31 @@ function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
       .style('opacity', 0)
   );
 
-  const tip = d3.select('#tooltip');
+  // Tooltip вешаем на document.documentElement (<html>), а не на body.
+  // Если на body есть transform: scale(...), то position:fixed на его потомке
+  // позиционируется относительно body-системы координат, а не viewport —
+  // из-за этого чем правее курсор, тем сильнее дрейфует tooltip.
+  // У <html> трансформов нет, поэтому position:fixed здесь = viewport-координаты.
+  // Переиспользуем если уже создан (при повторном rerender не дублируется).
+  let _tipEl = document.getElementById('economy-chart-tip');
+  if (!_tipEl) {
+    _tipEl = document.createElement('div');
+    _tipEl.id = 'economy-chart-tip';
+    _tipEl.style.cssText = [
+      'position:fixed',
+      'background:rgba(0,0,0,0.88)',
+      'color:#fff',
+      'padding:8px 12px',
+      'border-radius:6px',
+      'z-index:2147483647',
+      'pointer-events:none',
+      'white-space:nowrap',
+      'font:12px/1.5 sans-serif',
+      'opacity:0',
+      'transition:opacity 0.06s'
+    ].join(';');
+    document.documentElement.appendChild(_tipEl);
+  }
 
   // оверлей
   g.append('rect')
@@ -1490,7 +1945,6 @@ function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
 
       focusDots.forEach((dot, k)=>{
         const v = seriesDefs[k].values[idx];
-        // Не показываем точку если данных нет (v === 0)
         if (v !== 0) {
           dot.attr('cx', xv).attr('cy', y(v)).style('opacity',1);
         } else {
@@ -1499,23 +1953,51 @@ function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
       });
 
       const val = unitInfo.formatVal;
-      const fmtVal = (v) => v === 0 ? '<span style="color:#666;">нет данных</span>' : val(v);
-      tip.style('opacity',1)
-         .style('left', (event.pageX + 12) + 'px')
-         .style('top',  (event.pageY - 24) + 'px')
-         .html(`
-          <div style="font:12px sans-serif; color:#fff;">
-            <div style="color:#bdbdbd; margin-bottom:4px;"><b>${MONTHS[idx]}</b></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;"></span>Котлы: ${fmtVal(seriesDefs[0].values[idx])} <span style="color:#b8dbff;">(прошл.: ${fmtVal(areaDefs[0].values[idx])})</span></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;"></span>Турбины: ${fmtVal(seriesDefs[1].values[idx])} <span style="color:#ffe47a;">(прошл.: ${fmtVal(areaDefs[1].values[idx])})</span></div>
-            <div><span style="display:inline-block;width:10px;height:10px;background:#EF4156;border-radius:50%;margin-right:6px;"></span><b>Итоги: ${fmtVal(seriesDefs[2].values[idx])}</b> <span style="color:#EE5A6B;">(прошл.: ${fmtVal(areaDefs[2].values[idx])})</span></div>
-          </div>
-         `);
+      const fmtVal = (v) => v === 0 ? '<span style="color:#666">нет данных</span>' : val(v);
+
+      // Сначала заполняем контент (чтобы offsetWidth был актуальным)
+      _tipEl.innerHTML = `
+        <div style="color:#bdbdbd;margin-bottom:5px;font-size:13px;"><b>${MONTHS[idx]}</b></div>
+        <div style="margin-bottom:2px"><span style="display:inline-block;width:10px;height:10px;background:#74c0ff;border-radius:50%;margin-right:6px;vertical-align:middle"></span>Котлы: ${fmtVal(seriesDefs[0].values[idx])} <span style="color:#b8dbff">(пред.: ${fmtVal(areaDefs[0].values[idx])})</span></div>
+        <div style="margin-bottom:2px"><span style="display:inline-block;width:10px;height:10px;background:#ffd400;border-radius:50%;margin-right:6px;vertical-align:middle"></span>Турбины: ${fmtVal(seriesDefs[1].values[idx])} <span style="color:#ffe47a">(пред.: ${fmtVal(areaDefs[1].values[idx])})</span></div>
+        <div><span style="display:inline-block;width:10px;height:10px;background:#EF4156;border-radius:50%;margin-right:6px;vertical-align:middle"></span><b>Итоги: ${fmtVal(seriesDefs[2].values[idx])}</b> <span style="color:#EE5A6B">(пред.: ${fmtVal(areaDefs[2].values[idx])})</span></div>
+      `;
+
+      // Позиционируем с компенсацией CSS-трансформа родителя.
+      // Если на html/body стоит transform:scale(...), position:fixed дочернего элемента
+      // позиционируется в локальных координатах трансформированного предка, а не в viewport.
+      // getBoundingClientRect() возвращает реальные viewport-координаты предка с учётом transform,
+      // что позволяет точно конвертировать viewport-coords → local-coords родителя.
+      const par  = _tipEl.parentElement;
+      const parR = par.getBoundingClientRect();
+      const sx   = par.offsetWidth  > 0 ? parR.width  / par.offsetWidth  : 1;
+      const sy   = par.offsetHeight > 0 ? parR.height / par.offsetHeight : 1;
+
+      const tw = _tipEl.offsetWidth  || 220;
+      const th = _tipEl.offsetHeight || 80;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const gap = 14;
+
+      // Желаемая позиция в координатах viewport
+      let vpLeft = event.clientX + gap;
+      let vpTop  = event.clientY - 10;
+
+      // Boundary clamping в viewport-пространстве (учитываем реальный px-размер тултипа)
+      if (vpLeft + tw * sx > vw - 6) vpLeft = event.clientX - tw * sx - gap;
+      if (vpTop  + th * sy > vh - 6) vpTop  = vh - th * sy - 6;
+      if (vpTop  < 6)                vpTop  = 6;
+      if (vpLeft < 6)                vpLeft = 6;
+
+      // Конвертируем viewport-coords → локальные coords родителя
+      _tipEl.style.left    = ((vpLeft - parR.left) / sx) + 'px';
+      _tipEl.style.top     = ((vpTop  - parR.top)  / sy) + 'px';
+      _tipEl.style.opacity = '1';
     })
     .on('mouseleave', ()=>{
       focusLine.style('opacity',0);
       focusDots.forEach(dot => dot.style('opacity',0));
-      tip.style('opacity',0);
+      _tipEl.style.opacity = '0';
     });
 }
 /* ===== Настройки переключателей ===== */
@@ -1541,19 +2023,46 @@ function fmtMoneyShort(n){
 const toCum = arr => arr.reduce((acc,v,i)=> (acc[i]=(i?acc[i-1]:0)+v, acc), []);
 // Данные уже в рублях, для ТУТ делим на курс
 const toTut = arr => arr.map(v => RUB_PER_TUT > 0 ? v / RUB_PER_TUT : 0);
-// Инвертирование значений (экономия = положительное, перерасход = отрицательное)
-const invert = arr => arr.map(v => -v);
 
-// Применить текущие тумблеры к данным (возвращает новые массивы)
+// Собирает серии по станционным данным с учётом фильтра станций, флага ТЭЦ
+// и пропорциональным учётом выбранного оборудования (stationTurbFrac/stationBoilFrac).
+// stationData: { stationId: [[turbines×12],[boilers×12]] }
+// selectedStations: null (все) или массив ID выбранных станций
+// excludeTec: true/false — исключать ли турбины ТЭЦ-станций
+function buildSeriesFromStations(stationData, selectedStations, excludeTec) {
+  const b = new Array(12).fill(0);
+  const t = new Array(12).fill(0);
+  const s = new Array(12).fill(0);
+  for (const [stIdStr, arr] of Object.entries(stationData)) {
+    const stId = parseInt(stIdStr);
+    if (selectedStations !== null && !selectedStations.includes(stId)) continue;
+    const turbines = arr[0];  // arr[0] = turbines[12]
+    const boilers  = arr[1];  // arr[1] = boilers[12]
+    const isTec = tecStations.includes(stId);
+    // Пропорциональный учёт включённого оборудования внутри станции
+    const turbFrac = stationTurbFrac[stId] !== undefined ? stationTurbFrac[stId] : 1.0;
+    const boilFrac = stationBoilFrac[stId] !== undefined ? stationBoilFrac[stId] : 1.0;
+    for (let i = 0; i < 12; i++) {
+      const bVal = (boilers[i] || 0) * boilFrac;
+      const tVal = (excludeTec && isTec) ? 0 : (turbines[i] || 0) * turbFrac;
+      b[i] += bVal;
+      t[i] += tVal;
+      s[i] += bVal + tVal;
+    }
+  }
+  return { b, t, s };
+}
+
+// Применить текущие тумблеры к данным (возвращает новые массивы).
+// Перерасход (положительные значения) рисуется выше 0, экономия — ниже 0.
 function transformAll(){
-  // Инвертируем все значения (* -1)
-  let b = invert(SERIES_BOILERS);
-  let t = invert(SERIES_TURBINES);
-  let s = invert(SERIES_TOTAL);
+  const selectedStations = getSelectedStations();
 
-  let bp = invert(SERIES_BOILERS_PREV);
-  let tp = invert(SERIES_TURBINES_PREV);
-  let sp = invert(SERIES_TOTAL_PREV);
+  const curr = buildSeriesFromStations(MONTHLY_RUB_BY_STATION,      selectedStations, excludeTecFromUrl);
+  const prev = buildSeriesFromStations(MONTHLY_RUB_BY_STATION_PREV, selectedStations, excludeTecFromUrl);
+
+  let b = curr.b, t = curr.t, s = curr.s;
+  let bp = prev.b, tp = prev.t, sp = prev.s;
 
   // Если режим ТУТ — конвертируем из рублей в ТУТ
   if (!isRub){
@@ -1609,8 +2118,25 @@ document.getElementById('toggle-cum').addEventListener('change', e=>{
   rerender();
 });
 
-// Первый рендер
-rerender();
+// Клик на блок "Итого" для переключения графика Экономия
+// (economyVisible объявлена выше, рядом с OVERALL_RATING, чтобы избежать TDZ в updateAllGauges)
+document.getElementById('summary-card-click').addEventListener('click', function() {
+  const barsContent = document.getElementById('bars-content');
+  const chartContainer = document.getElementById('economy-chart-container');
+
+  economyVisible = !economyVisible;
+
+  if (economyVisible) {
+    // Показать график, скрыть бары
+    barsContent.style.display = 'none';
+    chartContainer.style.display = 'flex';
+    rerender();
+  } else {
+    // Показать бары, скрыть график
+    chartContainer.style.display = 'none';
+    barsContent.style.display = 'flex';
+  }
+});
 
 </script>
 </div>
