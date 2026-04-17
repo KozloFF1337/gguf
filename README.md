@@ -1,15 +1,21 @@
 SELECT 
-    r.stationid,
-    r.date,
-    r.tut_total,
-    r.reserves_total,
-    CASE WHEN r.tut_total <> 0 THEN ROUND((r.reserves_total / r.tut_total)::numeric, 0) ELSE NULL END AS implied_rub_per_tut,
-    p.price_per_tut AS actual_price
-FROM reserves_rub r
-LEFT JOIN raw_fuel_prices_monthly p 
-    ON p.stationid = r.stationid 
-    AND p.month_date = r.date
-WHERE r.period_type = 1
-  AND r.tut_total <> 0
-ORDER BY r.date DESC, r.stationid
-LIMIT 30;
+    m.stationid,
+    ROUND(m.sum_tut_monthly::numeric, 2)   AS tut_monthly_sum,
+    ROUND(y.tut_total::numeric, 2)          AS tut_yearly,
+    ROUND(m.sum_rub_monthly::numeric, 2)   AS rub_monthly_sum,
+    ROUND(y.reserves_total::numeric, 2)     AS rub_yearly,
+    ROUND((m.sum_rub_monthly - y.reserves_total)::numeric, 2) AS rub_diff
+FROM (
+    SELECT stationid,
+           SUM(tut_total)      AS sum_tut_monthly,
+           SUM(reserves_total) AS sum_rub_monthly
+    FROM reserves_rub
+    WHERE period_type = 1 AND EXTRACT(YEAR FROM date) = 2026
+    GROUP BY stationid
+) m
+LEFT JOIN (
+    SELECT stationid, tut_total, reserves_total
+    FROM reserves_rub
+    WHERE period_type = 2 AND EXTRACT(YEAR FROM date) = 2026
+) y ON m.stationid = y.stationid
+ORDER BY stationid;
