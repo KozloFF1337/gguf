@@ -1,6 +1,15 @@
-SELECT
-    SUM(tut_boilers + CASE WHEN stationid IN (2,3,4,5,6,7,8,10,12,13,14,17,18,19,20,21,22) THEN 0 ELSE tut_turbines END) AS tut_total,
-    SUM(reserves_boilers + CASE WHEN stationid IN (2,3,4,5,6,7,8,10,12,13,14,17,18,19,20,21,22) THEN 0 ELSE reserves_turbines END) AS rub_total
-FROM reserves_rub
-WHERE period_type = 2
-  AND EXTRACT(YEAR FROM date) = 2026;
+SELECT 
+    r.stationid,
+    r.date,
+    r.tut_total,
+    r.reserves_total,
+    CASE WHEN r.tut_total <> 0 THEN ROUND((r.reserves_total / r.tut_total)::numeric, 0) ELSE NULL END AS implied_rub_per_tut,
+    p.price_per_tut AS actual_price
+FROM reserves_rub r
+LEFT JOIN raw_fuel_prices_monthly p 
+    ON p.stationid = r.stationid 
+    AND p.month_date = r.date
+WHERE r.period_type = 1
+  AND r.tut_total <> 0
+ORDER BY r.date DESC, r.stationid
+LIMIT 30;
