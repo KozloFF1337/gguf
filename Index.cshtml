@@ -80,8 +80,6 @@
         margin: 0;
         }
     body {
-        display: flex;
-        justify-content: space-between;
         background-color: black;
         color: white;
         font-family: sans-serif;
@@ -325,6 +323,8 @@
 
 .barA-fill{ fill:#74c0ff; }    /* верхняя полоса - Текущий год (светло-синий) */
 .barB-fill{ fill:#0078A8; }    /* нижняя полоса - Прошлый год (синий) */
+.barA-pos { fill:#51cf66; }    /* резерв / экономия (зелёный) */
+.barA-neg { fill:#fd817e; }    /* перерасход (красный) */
 .bar-label{
   fill: #aaaaaa; font:8px/1 sans-serif;
   text-anchor:end; dominant-baseline:middle;
@@ -594,15 +594,17 @@
                     <!-- Два KPI: Экономия (отрицательные) / Перерасход (положительные) -->
                     <div class="kpis" style="margin-bottom: 8px;">
                         <div class="kpi" style="position: relative;">
-                        <span style="position: absolute; top: 2px; right: 2px; background-color: #c0392b; color: white; font-size: 7px; padding: 1px 4px; border-radius: 3px;">в разработке</span>
                         <div class="kpi-label" id="kpi-rub-label">Резервы, ₽</div>
                         <div class="kpi-value" id="kpi-rub">—</div>
                         </div>
                         <div class="kpi" style="position: relative;">
-                        <span style="position: absolute; top: 2px; right: 2px; background-color: #c0392b; color: white; font-size: 7px; padding: 1px 4px; border-radius: 3px;">в разработке</span>
                         <div class="kpi-label" id="kpi-tut-label">Резервы, ТУТ</div>
                         <div class="kpi-value" id="kpi-tut">—</div>
                         </div>
+                    </div>
+                    <div style="display:flex; justify-content:center; align-items:center; gap:6px; margin-top:2px;">
+                        <input type="checkbox" id="chk-excl-tec" style="width:14px;height:14px;cursor:pointer;accent-color:#e67e22;">
+                        <label for="chk-excl-tec" style="color:#aaa;font-size:11px;cursor:pointer;user-select:none;">Исключить турбины ТЭЦ</label>
                     </div>
                     </div>
 
@@ -615,14 +617,17 @@
                     <!-- Блоки с барами (по умолчанию видны) -->
                     <div id="bars-content" style="display: flex; gap: 8px; width: 100%;">
                         <div class="bar-card" style="position: relative;">
-                            <span style="position: absolute; top: 4px; right: 4px; background-color: #c0392b; color: white; font-size: 8px; padding: 2px 5px; border-radius: 3px;">в разработке</span>
+                            @if (ViewBag.QLossInDevelopment == true)
+                            {
+                                <span style="position:absolute;top:6px;right:8px;background:#e67e22;color:#fff;font-size:10px;padding:2px 7px;border-radius:8px;z-index:2;">в разработке</span>
+                            }
                             <div class="mini-title">Котлы - потери тепла (КПД)</div>
                             <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
                             <svg id="bars-left" class="mini-svg"></svg>
                         </div>
 
                         <div class="bar-card" style="position: relative;">
-                            <span style="position: absolute; top: 4px; right: 4px; background-color: #c0392b; color: white; font-size: 8px; padding: 2px 5px; border-radius: 3px;">в разработке</span>
+                            <span style="position:absolute;top:6px;right:8px;background:#e67e22;color:#fff;font-size:10px;padding:2px 7px;border-radius:8px;z-index:2;">в разработке</span>
                             <div class="mini-title">Турбины - резервы (РТЭ)</div>
                             <div class="mini-legend"><span class="sw sw-a"></span>Текущий год<span class="sw sw-b"></span>Прошлый год</div>
                             <svg id="bars-right" class="mini-svg"></svg>
@@ -800,7 +805,7 @@
         const tecStations = [14, 3, 6, 7, 22, 4, 2, 12, 13, 8, 10, 17, 18, 19, 20, 21, 5];
 
         // Флаг исключения турбин ТЭЦ (читаем из localStorage, по умолчанию true)
-        const excludeTecTurbinesFlag = localStorage.getItem('excludeTecTurbines') !== 'false';
+        let excludeTecTurbinesFlag = localStorage.getItem('excludeTecTurbines') !== 'false';
 
         const stationLinks = {
             25: 'https://powerbi-rs.suek.ru/reports/powerbi/Analytics/%D0%9F%D0%B5%D1%80%D0%B5%D0%B6%D0%BE%D0%B3%D0%B8/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81%D0%BA%D0%B8%D0%B9%20%D1%84%D0%B8%D0%BB%D0%B8%D0%B0%D0%BB/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%20%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%20%D0%A0%D0%B5%D1%84%D0%93%D0%A0%D0%AD%D0%A1',   // для Рефтинской
@@ -834,6 +839,9 @@
 
         const kpdvalues = @Html.Raw(NormativeValues.GetKpdValuesAsJson());
 
+        // Нормативы потерь тепла q2–q6 по котлам: { stationId: { "boilerCode": { q2, q3, q4, q5, q6 } } }
+        const qNormValues = @Html.Raw(NormativeValues.GetQLossValuesAsJson());
+
         const urtvalues = @Html.Raw(NormativeValues.GetUrtValuesAsJson());
 
 
@@ -853,9 +861,12 @@
     const YEARLY_RUB_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.YearlyRubByStationFromMonthly));
     // Только турбины по станциям за год — для исключения ТЭЦ-турбин при активной галочке.
     const YEARLY_TURB_RUB_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.YearlyTurbRubByStation));
+    // ТУТ по станциям за год (SUM месячных tut_total / tut_turbines из reserves_rub).
+    const YEARLY_TUT_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.YearlyTutByStation));
+    const YEARLY_TURB_TUT_BY_STATION = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.YearlyTurbTutByStation));
 
     // Читаем настройку исключения турбин ТЭЦ из localStorage (по умолчанию true)
-    const excludeTecFromUrl = localStorage.getItem('excludeTecTurbines') !== 'false';
+    let excludeTecFromUrl = localStorage.getItem('excludeTecTurbines') !== 'false';
 
     // Читаем состояние выбора оборудования из localStorage
     const _eqStateRaw = (() => {
@@ -906,7 +917,7 @@
             let nominalValue = item.NominalURT || 0;
             const variation = item.Variation || 0;
 
-            // NominalURT < 500 → АСТЭП не дал nominal_urt (реальный УРТ всегда > 700 г/кВт·ч)
+            // NominalURT < 500 → АСТЭП не дал nominal_urt (реальный УРТ всегда > 700 ккал/кВт·ч)
             // Берём базу из normative_config и прибавляем variation
             if (nominalValue < 500) {
                 const stationUrtValues = urtvalues[item.StationID];
@@ -1343,55 +1354,63 @@ function calculateWeightedRatingTurbines(turbinesArray, selectedStations) {
     return totalWeight > 0 ? sumRatingWeighted / totalWeight : 0;
 }
 
-// ---- Расчёт резервов в ТУТ по алгоритму изменения расхода топлива ----
-// Формулы из файла "Алгоритм расчета изменения расхода топлива.xlsx":
-//
-// Для турбин (∆ВТА):
-//   ∆qТ(БР) = УРТ_факт - УРТ_после_КР
-//   ∆ВТА = ∆qТ(БР) * Э / 7000 / (ηК(Н)/100) / (ηТП/100)
-//   где Э = Consumption (выработка э/э, тыс.кВт·ч), ηК(Н) = 85%, ηТП = 98%
-//
-// Для котлов (∆ВКА):
-//   ∆ВКА = (КПД_после_КР - КПД_факт) / 100 * ВКФАКТ
-//   где ВКФАКТ = Consumption котла (расход топлива фактический)
-//
-// Итого ТУТ = SUM(∆ВТА) + SUM(∆ВКА)
-
-const DEFAULT_ETA_KN = 85;   // КПД котлов нетто (по умолчанию), %
-const DEFAULT_ETA_TP = 98;   // Коэффициент теплового потока (по умолчанию), %
+// ---- Расчёт резервов в ТУТ ----
+// ТУТ_total_станции = −B_total × stationRating / 100
+// где stationRating = ((100 + boilerRating) / (100 + turbineRating) − 1) × 100
+// ТУТ_котлов = Σ (KPD_norm − KPD_fact)/100 × b.size
+// ТУТ_турбин = ТУТ_total − ТУТ_котлов
 
 function calculateReserves(selectedStations) {
-    // Расчёт ∆ВТА по каждой турбине (новая формула)
-    // отклонение_УРТ = УРТ_норм - УРТ_факт
-    // ∆ВТА = отклонение_УРТ * Выработка_ЭЭ / 7000 / (КПД_нетто/100) / (Коэфф_ТП/100)
-    let totalDeltaTurbines = 0;
+    // Годовой период — суммируем месячные ТУТ из БД (аналогично calculateReservesRub).
+    // Это даёт точное совпадение суммы месяцев с годовым итогом.
+    if (Object.keys(PRICE_BY_STATION).length === 0 && Object.keys(YEARLY_TUT_BY_STATION).length > 0) {
+        let total = 0;
+        for (const [stId, val] of Object.entries(YEARLY_TUT_BY_STATION)) {
+            const stationId = parseInt(stId);
+            if (selectedStations !== null && !selectedStations.includes(stationId)) continue;
+            let stationTurbTut = YEARLY_TURB_TUT_BY_STATION[stId] || 0;
+            let stationBoilTut = val - stationTurbTut;
+            if (excludeTecFromUrl && tecStations.includes(stationId)) {
+                stationTurbTut = 0;
+            }
+            const turbFrac = stationTurbFrac[stationId] !== undefined ? stationTurbFrac[stationId] : 1.0;
+            const boilFrac = stationBoilFrac[stationId] !== undefined ? stationBoilFrac[stationId] : 1.0;
+            total += stationTurbTut * turbFrac + stationBoilTut * boilFrac;
+        }
+        return total;
+    }
+
+    // Суточный/месячный период — считаем из treemap-данных.
+    const boilersByStation = {};
+    hierarchicalData_boiler.children.forEach(b => {
+        if (selectedStations !== null && !selectedStations.includes(b.station)) return;
+        if (b.size <= 0) return;
+        if (!boilersByStation[b.station]) boilersByStation[b.station] = [];
+        boilersByStation[b.station].push(b);
+    });
+    const turbinesByStation = {};
     hierarchicalData_turbin.children.forEach(t => {
         if (selectedStations !== null && !selectedStations.includes(t.station)) return;
         if (t.excluded) return;
         if (t.size <= 0) return;
-        const urtFact = t.urt;
-        const urtNorm = t.urt_percent_normal;
-        const deltaURT = urtFact - urtNorm;
-        const genEE = (t.generation_ee > 0) ? t.generation_ee : t.size;
-        const kpdN = (t.kpd_netto > 0) ? t.kpd_netto : DEFAULT_ETA_KN;
-        const kTP = (t.koeff_tp > 0) ? t.koeff_tp : DEFAULT_ETA_TP;
-        const deltaBTA = deltaURT * genEE / 7000 / (kpdN / 100) / (kTP / 100);
-        totalDeltaTurbines += deltaBTA;
+        if (!turbinesByStation[t.station]) turbinesByStation[t.station] = [];
+        turbinesByStation[t.station].push(t);
     });
-
-    // Расчёт ∆ВКА по каждому котлу
-    let totalDeltaBoilers = 0;
-    hierarchicalData_boiler.children.forEach(b => {
-        if (selectedStations !== null && !selectedStations.includes(b.station)) return;
-        if (b.size <= 0) return;
-        const kpdFact = b.kpd;
-        const kpdKR = b.kpd_percent_normal;
-        const consumption = b.size;
-        const deltaBKA = (kpdKR - kpdFact) / 100 * consumption;
-        totalDeltaBoilers += deltaBKA;
+    let totalTUT = 0;
+    Object.keys(boilersByStation).forEach(stId => {
+        const boilers = boilersByStation[stId];
+        const turbines = turbinesByStation[stId] || [];
+        const B_size = boilers.reduce((acc, b) => acc + b.size, 0);
+        if (B_size <= 0) return;
+        const B_consumption = boilers.reduce((acc, b) => acc + b.consumption, 0);
+        const boilerRating = boilers.reduce((acc, b) => acc + b.kpd_percent * b.size, 0) / B_size;
+        const turbineWeightSum = turbines.reduce((acc, t) => acc + t.size, 0);
+        const turbineRating = turbineWeightSum > 0
+            ? turbines.reduce((acc, t) => acc + t.urt_percent * t.size, 0) / turbineWeightSum : 0;
+        const stationRating = ((100 + boilerRating) / (100 + turbineRating) - 1) * 100;
+        totalTUT += -B_consumption * stationRating / 100;
     });
-
-    return totalDeltaTurbines + totalDeltaBoilers;
+    return totalTUT;
 }
 
 // Начальные значения
@@ -1426,28 +1445,36 @@ function calculateReservesRub(selectedStations) {
         return total;
     }
 
-    // Суточный/месячный период: считаем ТУТ по каждой станции, умножаем на цену
+    // Суточный/месячный период: считаем ТУТ_total по каждой станции, умножаем на цену
     const tutByStation = {};
 
-    // Турбины (с учётом флага excluded — галочка ТЭЦ)
-    hierarchicalData_turbin.children.forEach(t => {
-        if (selectedStations !== null && !selectedStations.includes(t.station)) return;
-        if (t.excluded) return;   // ТЭЦ исключена
-        if (t.size <= 0) return;
-        const deltaURT = t.urt - t.urt_percent_normal;
-        const genEE = (t.generation_ee > 0) ? t.generation_ee : t.size;
-        const kpdN  = (t.kpd_netto > 0) ? t.kpd_netto : DEFAULT_ETA_KN;
-        const kTP   = (t.koeff_tp  > 0) ? t.koeff_tp  : DEFAULT_ETA_TP;
-        const deltaBTA = deltaURT * genEE / 7000 / (kpdN / 100) / (kTP / 100);
-        tutByStation[t.station] = (tutByStation[t.station] || 0) + deltaBTA;
-    });
-
-    // Котлы
+    const _boilersByStation = {};
     hierarchicalData_boiler.children.forEach(b => {
         if (selectedStations !== null && !selectedStations.includes(b.station)) return;
         if (b.size <= 0) return;
-        const deltaBKA = (b.kpd_percent_normal - b.kpd) / 100 * b.size;
-        tutByStation[b.station] = (tutByStation[b.station] || 0) + deltaBKA;
+        if (!_boilersByStation[b.station]) _boilersByStation[b.station] = [];
+        _boilersByStation[b.station].push(b);
+    });
+    const _turbinesByStation = {};
+    hierarchicalData_turbin.children.forEach(t => {
+        if (selectedStations !== null && !selectedStations.includes(t.station)) return;
+        if (t.excluded) return;
+        if (t.size <= 0) return;
+        if (!_turbinesByStation[t.station]) _turbinesByStation[t.station] = [];
+        _turbinesByStation[t.station].push(t);
+    });
+    Object.keys(_boilersByStation).forEach(stId => {
+        const boilers = _boilersByStation[stId];
+        const turbines = _turbinesByStation[stId] || [];
+        const B_size = boilers.reduce((acc, b) => acc + b.size, 0);
+        if (B_size <= 0) return;
+        const B_consumption = boilers.reduce((acc, b) => acc + b.consumption, 0);
+        const boilerRating = boilers.reduce((acc, b) => acc + b.kpd_percent * b.size, 0) / B_size;
+        const turbineWeightSum = turbines.reduce((acc, t) => acc + t.size, 0);
+        const turbineRating = turbineWeightSum > 0
+            ? turbines.reduce((acc, t) => acc + t.urt_percent * t.size, 0) / turbineWeightSum : 0;
+        const stationRating = ((100 + boilerRating) / (100 + turbineRating) - 1) * 100;
+        tutByStation[stId] = -B_consumption * stationRating / 100;
     });
 
     // Рубли = ТУТ × цена для каждой станции
@@ -1593,30 +1620,39 @@ function updateSummary(){
   percentOut.textContent = `${c}${totalValue.toFixed(2)}%`;
   percentOut.style.color = summaryColor;
 
-  // Определяем тип: Экономия (отрицательные значения = хорошо) или Перерасход (положительные = плохо)
-  // Отрицательный резерв = экономия топлива (зелёный)
-  // Положительный резерв = перерасход топлива (красный)
-  const isEconomy = RESERVES_TUT < 0;
-  const labelText = isEconomy ? 'Экономия' : 'Перерасход';
-  const valueColor = isEconomy ? '#00d26a' : '#EF4156';
+  // ТУТ и Рубли могут иметь разные знаки — определяем независимо
+  const isTutEconomy = RESERVES_TUT < 0;
+  const isRubEconomy = RESERVES_RUB < 0;
 
-  // Обновляем метки
-  rubLabelEl.textContent = `${labelText}, ₽`;
-  tutLabelEl.textContent = `${labelText}, ТУТ`;
+  tutLabelEl.textContent = isTutEconomy ? 'Экономия, ТУТ' : 'Перерасход, ТУТ';
+  rubLabelEl.textContent = isRubEconomy ? 'Экономия, ₽'   : 'Перерасход, ₽';
 
-  // Обновляем значения с цветом (абсолютные значения, знак уже в названии)
-  const absTut = Math.abs(RESERVES_TUT);
-  const absRub = Math.abs(RESERVES_RUB);
+  tutEl.textContent = fmtRu(Math.abs(RESERVES_TUT));
+  tutEl.style.color = isTutEconomy ? '#00d26a' : '#EF4156';
 
-  tutEl.textContent = fmtRu(absTut);
-  tutEl.style.color = valueColor;
+  rubEl.textContent = `₽ ${fmtMoneyRu(Math.abs(RESERVES_RUB))}`;
+  rubEl.style.color = isRubEconomy ? '#00d26a' : '#EF4156';
 
-  rubEl.textContent = `₽ ${fmtMoneyRu(absRub)}`;
-  rubEl.style.color = valueColor;
+  // Пересчитываем и перерисовываем график q-потерь котлов
+  if (typeof window.redrawQLossBars === 'function') {
+    window.redrawQLossBars();
+  }
 }
 
 // Первоначальный расчёт и отрисовка
 updateAllGauges();
+
+// Инициализируем чекбокс исключения турбин ТЭЦ
+const chkExclTec = document.getElementById('chk-excl-tec');
+if (chkExclTec) {
+    chkExclTec.checked = excludeTecFromUrl;
+    chkExclTec.addEventListener('change', function() {
+        excludeTecFromUrl = this.checked;
+        excludeTecTurbinesFlag = this.checked;
+        localStorage.setItem('excludeTecTurbines', this.checked ? 'true' : 'false');
+        updateAllGauges();
+    });
+}
 
 // Перезагружаем страницу если браузер восстановил её из BFCACHE (back-forward cache),
 // чтобы гарантировать пересчёт с актуальными настройками оборудования из localStorage.
@@ -1629,21 +1665,90 @@ window.addEventListener('pageshow', function(e) {
   const SCALE_MODE = 'auto';          // 'auto' или 'fixed'
   const FIXED_MAX = 3000;             // если SCALE_MODE === 'fixed'
 
-  // ===== КОНСТАНТНЫЕ ДАННЫЕ в ТУТ (пример) =====
-  // Две серии (a и b) на каждый показатель.
-  const LEFT_BARS2 = [
-    { label: 'С уходящими газами, q₂', a: 1250, b: 980 },
-    { label: ['От хим. и мех. неполноты',' сгорания топлива, q₃ q₄'], a: 840,  b: 920 },
-    { label: 'От наружного охлаждения котла, q₅', a: 1630, b: 1510 },
-    { label: 'С физ. теплом шлака, q₆', a: 690,  b: 730 },
-    { label: 'Фактор паровой нагрузки, Dпп', a: 1420, b: 1330 },
-  ];
+  // ===== РАСЧЁТ ПОТЕРЬ ТЕПЛА КОТЛОВ (q2–qпуск) =====
+  // Резерв/перерасход по q-потерям для выбранных котлов/станций
+  // Формула: delta = q_норм - q_факт (%), reserve_TUT = delta/100 * Consumption
+  // qпуск: норматив = 0, любые пуски = перерасход
+  // ВАЖНО: если у котла все q-поля = 0 — данные из АСТЭП ещё не загружены,
+  //        такой котёл пропускается (иначе норма - 0 даёт огромный ложный резерв)
+  // Вспомогательная функция: ширина бара = |значение|, знак сохраняется в d.sign для цвета
+  function qLossBarEntry(tutVal) {
+    const rounded = Math.round(tutVal);
+    return { a: Math.abs(rounded), b: 0, sign: rounded >= 0 ? 1 : -1, rawVal: rounded };
+  }
+
+  // Расчёт q-потерь с фильтром по выбранным станциям (null = все)
+  function computeQLossTUT(selectedStations) {
+    let tutQ2 = 0, tutQ34 = 0, tutQ5 = 0, tutQ6 = 0, tutQpusk = 0;
+
+    boilersData.forEach(b => {
+      const sid = b.StationID;
+      const bid = b.BoilerID;
+      const key = `${sid}_${bid}`;
+
+      // Фильтр по выбранным станциям (рейтинговые чекбоксы)
+      if (selectedStations !== null && !selectedStations.includes(sid)) return;
+      // Пропускаем выключенные котлы (параметрические чекбоксы)
+      if (eqBoilers[key] === false) return;
+      // Пропускаем котлы с нулевым потреблением
+      const cons = b.Consumption || 0;
+      if (cons <= 0) return;
+
+      // Пропускаем котлы у которых все q = 0 — данные ещё не загружены из АСТЭП
+      // (иначе норма - 0 даёт ложный огромный "резерв")
+      const hasQData = (b.Q2 || 0) > 0 || (b.Q3 || 0) > 0 || (b.Q4 || 0) > 0
+                    || (b.Q5 || 0) > 0 || (b.Q6 || 0) > 0 || (b.QPusk || 0) > 0;
+      if (!hasQData) return;
+
+      const norms = (qNormValues[sid] && qNormValues[sid][bid]) ? qNormValues[sid][bid] : {};
+
+      // delta = норма - факт; положительный = экономия (меньше потерь чем норма)
+      const dq2    = (norms.q2 || 0) - (b.Q2    || 0);
+      const dq3    = (norms.q3 || 0) - (b.Q3    || 0);
+      const dq4    = (norms.q4 || 0) - (b.Q4    || 0);
+      const dq5    = (norms.q5 || 0) - (b.Q5    || 0);
+      const dq6    = (norms.q6 || 0) - (b.Q6    || 0);
+      const dqpusk = 0               - (b.QPusk  || 0);  // норматив qпуск = 0
+
+      tutQ2    += dq2    / 100 * cons;
+      tutQ34   += (dq3 + dq4) / 100 * cons;
+      tutQ5    += dq5    / 100 * cons;
+      tutQ6    += dq6    / 100 * cons;
+      tutQpusk += dqpusk / 100 * cons;
+    });
+
+    return { q2: tutQ2, q34: tutQ34, q5: tutQ5, q6: tutQ6, qpusk: tutQpusk };
+  }
+
+  // Флаг режима «в разработке» для q-потерь — приходит из appsettings.json (FeatureFlags:QLossInDevelopment)
+  window.Q_LOSS_IN_DEV = @((bool)ViewBag.QLossInDevelopment ? "true" : "false");
+
+  // Захардкоженные значения-заглушки на случай, когда q-потери в разработке.
+  // Подобраны по масштабу так же, как RIGHT_BARS2 у резервов турбин.
+  const Q_LOSS_PLACEHOLDER_TUT = { q2: 1500, q34: 600, q5: 300, q6: 200, qpusk: 400 };
+
+  // Перерисовка левого графика q-потерь — вызывается при изменении чекбоксов станций
+  window.redrawQLossBars = function() {
+    const tut = window.Q_LOSS_IN_DEV
+        ? Q_LOSS_PLACEHOLDER_TUT
+        : computeQLossTUT(getSelectedStations());
+    window._qlossTUT = tut;
+    const leftBars = [
+      { label: 'С уходящими газами, q₂',                                     ...qLossBarEntry(tut.q2)    },
+      { label: ['От хим. и мех. неполноты',' сгорания топлива, q₃ q₄'],      ...qLossBarEntry(tut.q34)   },
+      { label: 'От наружного охлаждения котла, q₅',                           ...qLossBarEntry(tut.q5)    },
+      { label: 'С физ. теплом шлака, q₆',                                     ...qLossBarEntry(tut.q6)    },
+      { label: 'Пуски, q', sub: 'пуск',                                       ...qLossBarEntry(tut.qpusk) },
+    ];
+    drawDualBars('bars-left', leftBars, { sharedMax: computeSharedMax([leftBars]), unit: UNIT });
+  };
+
   const RIGHT_BARS2 = [
     { label: 'Вакуум, W', a: 910,  b: 820 },
-    { label: 'Температура пит. воды, Tпв', a: 1360, b: 1480 },
-    { label: 'Параметры пара, P₀, T₀, Tппп', a: 1210, b: 990  },
+    { label: 'Температура пит. воды, T', sub: 'пв', a: 1360, b: 1480 },
     { label: 'Режим 1 корп', a: 1970, b: 1820 },
-    { label: 'Фактор эл. нагрузки, Nэ', a: 780,  b: 860  },
+    { label: 'Прочее', a: 1210, b: 990  },
+    { label: 'Фактор эл. нагрузки, N', sub: 'э', a: 780,  b: 860  },
   ];
 
   // формат числа "1 234"
@@ -1677,8 +1782,8 @@ function drawDualBars(svgId, rows, opts = {}) {
   const mLabel = meas.append('text').attr('class','bar-label');
   const mValue = meas.append('text').attr('class','bar-value');
 
-  // Собираем все тексты меток (включая многострочные)
-  const labelTexts = rows.flatMap(d => Array.isArray(d.label) ? d.label : [d.label]);
+  // Собираем все тексты меток (включая многострочные и с подстрочным индексом)
+  const labelTexts = rows.flatMap(d => Array.isArray(d.label) ? d.label : [d.label + (d.sub || '')]);
   const valueTexts = rows.flatMap(d => [ `${fmtTU(d.a)} ${UNIT}`, `${fmtTU(d.b)}` ]);
 
   const wLabel = s => { mLabel.text(s); return mLabel.node().getComputedTextLength(); };
@@ -1733,26 +1838,36 @@ function drawDualBars(svgId, rows, opts = {}) {
 
     // серия 1 (верх)
     const aW = x(Math.max(0, +d.a||0));
-    g.append('path').attr('d', pillRight(y + 1, half, aW)).attr('class','barA-fill');
+    // Если у бара есть знак (q-потери) — зелёный для резерва, красный для перерасхода
+    const barAClass = d.sign !== undefined
+      ? (d.sign >= 0 ? 'barA-pos' : 'barA-neg')
+      : 'barA-fill';
+    g.append('path').attr('d', pillRight(y + 1, half, aW)).attr('class', barAClass);
 
-    // серия 2 (низ)
+    // серия 2 (низ) — только когда нет знакового режима
     const bW = x(Math.max(0, +d.b||0));
-    g.append('path').attr('d', pillRight(y + barH - 1 - half, half, bW)).attr('class','barB-fill');
+    if (d.sign === undefined) {
+      g.append('path').attr('d', pillRight(y + barH - 1 - half, half, bW)).attr('class','barB-fill');
+    }
 
     // значения — сразу ПОСЛЕ соответствующей полосы (справа от неё)
+    // Если rawVal определён — показываем знаковое значение (может быть отрицательным)
+    const aLabel = d.rawVal !== undefined ? fmtTU(d.rawVal) : fmtTU(d.a);
     g.append('text')
       .attr('class','bar-value')
       .attr('x', aW + 8)
-      .attr('y', y + 1 + half/2 + .5)
+      .attr('y', y + (d.sign !== undefined ? barH/2 : 1 + half/2) + .5)
       .attr('text-anchor','start')
-      .text(`${fmtTU(d.a)}`);
+      .text(`${aLabel}`);
 
-    g.append('text')
-      .attr('class','bar-value')
-      .attr('x', bW + 8)
-      .attr('y', y + barH - 1 - half + half/2 + .5)
-      .attr('text-anchor','start')
-      .text(`${fmtTU(d.b)}`);
+    if (d.sign === undefined) {
+      g.append('text')
+        .attr('class','bar-value')
+        .attr('x', bW + 8)
+        .attr('y', y + barH - 1 - half + half/2 + .5)
+        .attr('text-anchor','start')
+        .text(`${fmtTU(d.b)}`);
+    }
   });
 
   // подписи показателей — ПЕРЕД линией, справа выравниваем к оси
@@ -1772,6 +1887,15 @@ function drawDualBars(svgId, rows, opts = {}) {
           .attr('text-anchor', 'end')
           .text(line);
       });
+    } else if (d.sub) {
+      // Метка с подстрочным индексом (например, T с индексом "пв")
+      const textEl = labelsG.append('text')
+        .attr('class', 'bar-label')
+        .attr('x', 0)
+        .attr('y', yCenter + 0.5)
+        .attr('text-anchor', 'end');
+      textEl.append('tspan').text(d.label);
+      textEl.append('tspan').attr('dy', '2.5').attr('font-size', '70%').text(d.sub);
     } else {
       // Однострочная метка
       labelsG.append('text')
@@ -1784,8 +1908,10 @@ function drawDualBars(svgId, rows, opts = {}) {
   });
 }
 
-const SHARED_MAX = computeSharedMax([LEFT_BARS2, RIGHT_BARS2]);
-drawDualBars('bars-left',  LEFT_BARS2,  { sharedMax: SHARED_MAX, unit: UNIT });
+// Левый график q-потерь — перерисовывается при смене чекбоксов станций
+window.redrawQLossBars();
+// Правый график статичный
+const SHARED_MAX = computeSharedMax([RIGHT_BARS2]);
 drawDualBars('bars-right', RIGHT_BARS2, { sharedMax: SHARED_MAX, unit: UNIT });
 
 
@@ -1795,6 +1921,9 @@ const MONTHS = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','
 // Используются в transformAll() для фильтрации по галочкам станций и ТЭЦ.
 const MONTHLY_RUB_BY_STATION      = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyRubByStation));
 const MONTHLY_RUB_BY_STATION_PREV = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyRubByStationPrev));
+// Помесячные ТУТ по станциям (формат аналогичен RUB: stationId → [[turb×12],[boil×12]]).
+const MONTHLY_TUT_BY_STATION      = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTutByStation));
+const MONTHLY_TUT_BY_STATION_PREV = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.MonthlyTutByStationPrev));
 
 
 function drawMultiLineEnhanced(svgId, seriesDefs, areaDefs, unitInfo){
@@ -2057,16 +2186,20 @@ function buildSeriesFromStations(stationData, selectedStations, excludeTec) {
 function transformAll(){
   const selectedStations = getSelectedStations();
 
-  const curr = buildSeriesFromStations(MONTHLY_RUB_BY_STATION,      selectedStations, excludeTecFromUrl);
-  const prev = buildSeriesFromStations(MONTHLY_RUB_BY_STATION_PREV, selectedStations, excludeTecFromUrl);
+  let b, t, s, bp, tp, sp;
 
-  let b = curr.b, t = curr.t, s = curr.s;
-  let bp = prev.b, tp = prev.t, sp = prev.s;
-
-  // Если режим ТУТ — конвертируем из рублей в ТУТ
-  if (!isRub){
-    b = toTut(b); t = toTut(t); s = toTut(s);
-    bp = toTut(bp); tp = toTut(tp); sp = toTut(sp);
+  if (!isRub && Object.keys(MONTHLY_TUT_BY_STATION).length > 0) {
+    // Режим ТУТ — берём ТУТ напрямую из БД (точные помесячные значения).
+    const curr = buildSeriesFromStations(MONTHLY_TUT_BY_STATION,      selectedStations, excludeTecFromUrl);
+    const prev = buildSeriesFromStations(MONTHLY_TUT_BY_STATION_PREV, selectedStations, excludeTecFromUrl);
+    b = curr.b; t = curr.t; s = curr.s;
+    bp = prev.b; tp = prev.t; sp = prev.s;
+  } else {
+    // Режим рублей.
+    const curr = buildSeriesFromStations(MONTHLY_RUB_BY_STATION,      selectedStations, excludeTecFromUrl);
+    const prev = buildSeriesFromStations(MONTHLY_RUB_BY_STATION_PREV, selectedStations, excludeTecFromUrl);
+    b = curr.b; t = curr.t; s = curr.s;
+    bp = prev.b; tp = prev.t; sp = prev.s;
   }
 
   if (isCum){
