@@ -1,60 +1,50 @@
-1. raw_boilers.csv
-SELECT *
-FROM raw_boilers
-WHERE stationid IN (1, 2, 22)
-  AND date BETWEEN '2026-03-01' AND '2026-03-07'
-ORDER BY stationid, boilerid, date;
-2. raw_boilers_monthly.csv
-SELECT *
-FROM raw_boilers_monthly
-WHERE stationid IN (1, 2, 22)
-  AND month_date BETWEEN '2025-01-01' AND '2026-12-01'
-ORDER BY stationid, boilerid, month_date;
-3. raw_boilers_yearly.csv
-SELECT *
-FROM raw_boilers_yearly
-WHERE stationid IN (1, 2, 22)
-ORDER BY stationid, boilerid, year_date;
-4. raw_turbins.csv
-SELECT *
-FROM raw_turbins
-WHERE stationid IN (1, 2, 22)
-  AND date BETWEEN '2026-03-01' AND '2026-03-07'
-ORDER BY stationid, turbinid, date;
-5. raw_turbins_monthly.csv
-SELECT *
-FROM raw_turbins_monthly
-WHERE stationid IN (1, 2, 22)
-  AND month_date BETWEEN '2025-01-01' AND '2026-12-01'
-ORDER BY stationid, turbinid, month_date;
-6. raw_turbins_yearly.csv
-SELECT *
-FROM raw_turbins_yearly
-WHERE stationid IN (1, 2, 22)
-ORDER BY stationid, turbinid, year_date;
-7. Boilers.csv — EF-таблица с двойными кавычками
-SELECT *
-FROM "Boilers"
-WHERE "StationID" IN (1, 2, 22)
-ORDER BY "StationID", "BoilerID", "Date";
-8. Turbins.csv
-SELECT *
-FROM "Turbins"
-WHERE "StationID" IN (1, 2, 22)
-ORDER BY "StationID", "TurbinID", "Date";
-9. reserves_rub.csv — самая важная
-SELECT *
-FROM reserves_rub
-WHERE stationid IN (1, 2, 22)
-  AND date BETWEEN '2025-01-01' AND '2026-12-31'
-ORDER BY stationid, date, period_type;
-10. raw_fuel_prices_monthly.csv
-SELECT *
-FROM raw_fuel_prices_monthly
-WHERE stationid IN (1, 2, 22)
-ORDER BY stationid, month_date;
-11. (опционально) raw_fuel_prices.csv и raw_fuel_prices_yearly.csv
-Если эти таблицы у вас заполнены — пришлите тоже:
+Алтай
+БарТЭЦ-2 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%90%D0%BB%D1%82%D0%B0%D0%B9_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%91%D0%B0%D1%80%D0%A2%D0%AD%D0%A6-2_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
 
-SELECT * FROM raw_fuel_prices         WHERE stationid IN (1, 2, 22) ORDER BY stationid, date;
-SELECT * FROM raw_fuel_prices_yearly  WHERE stationid IN (1, 2, 22) ORDER BY stationid, year_date;
+БарТЭЦ-3 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%90%D0%BB%D1%82%D0%B0%D0%B9_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%91%D0%B0%D1%80%D0%A2%D0%AD%D0%A6-3_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+БийТЭЦ https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%90%D0%BB%D1%82%D0%B0%D0%B9_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%91%D0%B8%D0%B9%D0%A2%D0%AD%D0%A6_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+Красноярск
+
+КрТЭЦ-1 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%B0%D1%81%D0%A2%D0%AD%D0%A6-1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+КрТЭЦ-2 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%B0%D1%81%D0%A2%D0%AD%D0%A6-2_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+КрГРЭС-2 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%93%D0%A0%D0%AD%D0%A1-2_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+НазГРЭС https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D1%8F%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%93%D0%A0%D0%AD%D0%A1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+Кузбасс
+
+БелГРЭС https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%91%D0%B5%D0%BB%D0%93%D0%A0%D0%AD%D0%A1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+КемГРЭС https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D0%B5%D0%BC%D0%93%D0%A0%D0%AD%D0%A1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+КемТЭЦ https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D0%B5%D0%BC%D0%A2%D0%AD%D0%A6_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+НКТЭЦ https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%9A%D0%A2%D0%AD%D0%A6_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+ПримГРЭС https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9F%D1%80%D0%B8%D0%BC%D0%93%D0%A0%D0%AD%D0%A1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+РГРЭС https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%A0%D0%93%D0%A0%D0%AD%D0%A1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+ТУГРЭС https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9A%D1%83%D0%B7%D0%B1%D0%B0%D1%81%D1%81_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%A2%D0%A3%D0%93%D0%A0%D0%AD%D0%A1_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+Новосибирск
+
+БарТЭЦ https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%91%D0%B0%D1%80%D0%A2%D0%AD%D0%A6_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+НТЭЦ-2 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%A2%D0%AD%D0%A6-2_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+НТЭЦ-3 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%A2%D0%AD%D0%A6-3_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+НТЭЦ-4 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%A2%D0%AD%D0%A6-4_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+НТЭЦ-5 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%BE%D0%B2%D0%BE%D1%81%D0%B8%D0%B1%D0%B8%D1%80%D1%81%D0%BA_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9D%D0%A2%D0%AD%D0%A6-5_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+Хакассия
+
+АбТЭЦ https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%A5%D0%B0%D0%BA%D0%B0%D1%81%D1%81%D0%B8%D1%8F_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%90%D0%B1%D0%A2%D0%AD%D0%A6_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
+
+МинТЭЦ https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%A5%D0%B0%D0%BA%D0%B0%D1%81%D1%81%D0%B8%D1%8F_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%9C%D0%B8%D0%BD%D0%A2%D0%AD%D0%A6_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
