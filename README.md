@@ -1,4 +1,10 @@
-curl -L -o "C# Projects 10.zip" "https://raw.githubusercontent.com/KozloFF1337/gguf/main/C%23%20Projects%2010.zip"
+EXEC dbo.p_GetParamValuePivot
+     @station   = '08',
+     @branch    = N'Основная',
+     @codes     = '01K000GB0008,01K000KJ0008,01K000SQ0008,01K000LH0008,01K030MB9008,01K030MA9008,01K000TH0008,8,9,01K000UQ0008,01K000MN0008,01K000PQ0008,01K000FT0008,01K000NQ0008',
+     @startDate = '2026-01-01 00:00:00',
+     @endDate   = '2026-06-09 23:00:00',
+     @period    = N'Сутки';
 
 
 
