@@ -11,6 +11,7 @@
 # Логин 'admin' создать НЕЛЬЗЯ — поэтому дефолт админа = 'administrator'.
 # Полноправный супер-пользователь 'root' и так есть (пароль = GITLAB_ROOT_PASSWORD).
 # Пароли должны быть стойкими: GitLab отвергает короткие и «словарные».
+# GitLab 17 (Organizations): namespace требует organization_id — берём 'default'.
 # =====================================================================
 
 admin_password = ENV['ADMIN_PASSWORD']
@@ -30,14 +31,25 @@ if RESERVED.include?(user_username.downcase)
   user_username = 'altair-user'
 end
 
-# Создатель сущностей — встроенный root (он же админ). Через него Users/Groups
-# CreateService проходят авторизацию и корректно строят namespace.
+# Создатель сущностей — встроенный root (он же админ).
 creator = User.find_by(username: 'root') || User.admins.first
 abort('Не найден root/админ — не от кого создавать пользователей') unless creator
 
+# GitLab 17: дефолтная организация для namespace.
+org_id = nil
+if defined?(Organizations::Organization)
+  org = if Organizations::Organization.respond_to?(:default_organization)
+          Organizations::Organization.default_organization
+        else
+          Organizations::Organization.find_by(path: 'default') || Organizations::Organization.first
+        end
+  org_id = org&.id
+  warn '! Не нашёл дефолтную организацию — создание может упасть.' unless org_id
+end
+
 # Создать или обновить пользователя. Создание — через Users::CreateService
-# (строит личный namespace; «голый» User.new этого не делает → Namespace can't be blank).
-def upsert_user(creator, username:, name:, email:, password:, admin:)
+# (строит личный namespace; «голый» User.new этого не делает).
+def upsert_user(creator, org_id, username:, name:, email:, password:, admin:)
   existing = User.find_by(username: username) || User.find_by(email: email)
   if existing
     existing.assign_attributes(password: password, password_confirmation: password, admin: admin)
@@ -49,13 +61,14 @@ def upsert_user(creator, username:, name:, email:, password:, admin:)
     return nil
   end
 
-  res = Users::CreateService.new(
-    creator,
+  params = {
     username: username, name: name, email: email,
     password: password, password_confirmation: password,
     admin: admin, skip_confirmation: true
-  ).execute
+  }
+  params[:organization_id] = org_id if org_id
 
+  res  = Users::CreateService.new(creator, params).execute
   user = res.respond_to?(:payload) ? res.payload[:user] : res
   return user if user.respond_to?(:persisted?) && user.persisted?
 
@@ -65,22 +78,21 @@ def upsert_user(creator, username:, name:, email:, password:, admin:)
   nil
 end
 
-admin = upsert_user(creator, username: admin_username, name: 'Administrator',
+admin = upsert_user(creator, org_id, username: admin_username, name: 'Administrator',
                     email: "#{admin_username}@altair.local", password: admin_password, admin: true)
 puts "✓ админ:        #{admin_username}  (полные права)" if admin
 
-ro = upsert_user(creator, username: user_username, name: 'Read Only',
+ro = upsert_user(creator, org_id, username: user_username, name: 'Read Only',
                  email: "#{user_username}@altair.local", password: user_password, admin: false)
 puts "✓ пользователь: #{user_username}  (обычная учётка)" if ro
 
 # --- Группа 'altair': кладёшь проект сюда, и user сразу видит его read-only ---
 owner = admin || creator
-group = Group.find_by_full_path('altair')   # корректный API; колонки full_path в БД нет
+group = Group.find_by_full_path('altair')   # колонки full_path в БД нет — это метод
 unless group
-  res = Groups::CreateService.new(
-    owner, name: 'Altair', path: 'altair',
-    visibility_level: Gitlab::VisibilityLevel::PRIVATE
-  ).execute
+  gparams = { name: 'Altair', path: 'altair', visibility_level: Gitlab::VisibilityLevel::PRIVATE }
+  gparams[:organization_id] = org_id if org_id
+  res = Groups::CreateService.new(owner, gparams).execute
   group = res.respond_to?(:payload) ? res.payload[:group] : res
 end
 
